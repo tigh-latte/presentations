@@ -43,15 +43,14 @@ type Randomable [T any] interface {
 }
 
 func Randomise[T Randomable[T]]() T {
-    var t T
-    return t.Randomise()
+    return (*new(T)).Randomise()
 }
 
 func RandomiseMany[T Randomable[T]](total int) []T {
     tt := make([]T, len(total))
     for i := 0; i < total; i++ {
         tt[i] = Randomise[T]()
-    } 
+    }
 
     return tt
 }
@@ -79,9 +78,9 @@ var (p Person) Randomise() Person {
 // person_test.go
 func (t *testSuite) Test_CreatePerson() {
     person := testutil.Random[models.Person]()
+    // Make http request with person
 }
 ```
-
 
 ---
 # Why?

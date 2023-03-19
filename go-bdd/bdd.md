@@ -1,5 +1,11 @@
 ---
 theme: ./theme.json
+title: Go BDD
+author: Tighearnán Carroll
+extensions:
+  - image_ueberzug
+  - terminal
+  - file_loader
 ---
 # Welcome!
 
@@ -15,66 +21,179 @@ I'm assuming we, for the most part, use user stories here.
 ---
 # What is cucumber?
 
-A test process the deals with application behaviour, and is typically a natural extension of BDD.
+A test process written in the gherkin language, which expresses tests in natual language.
 
-Tests are written in a natural (instead of a programming) language, potentially allowing non-technical members of the workforce to understand/contribute to the test suite.
+This brings the advantage of:
 
-So in Golange where you would likely:
-```go
-// ex1
-func TestAccount_Withdrawal(t *testing.T) {
-	tests := map[string]struct {
-		balance  int64
-		withdraw int64
+<!-- stop -->
 
-		expBalance int64
-		expErr     error
-	}{
-		"successful withdraw": {
-			balance:    100,
-			withdraw:   50,
-			expBalance: 50,
-		},
-		"not enough funds": {
-			balance:  50,
-			withdraw: 100,
+- Non-technical members of an organisation can understand / contribute to test suites
+<!-- stop -->
 
-			expBalance: 50,
-			expErr:     errs.ErrInsufficientFunds,
-		},
-	}
+- Developers who are less familiar / experienced can understand / contribute to test suites
+<!-- stop -->
 
-	for name, test := range tests {
-		test := test
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
+- The tests themselves can become firm, unambiguous acceptance requirements
 
-			account := ex1.Account{
-				Balance: test.balance,
-			}
-			_, err := account.Withdraw(test.withdraw)
 
-			assert.Equal(t, test.expBalance, account.Balance)
-			assert.Equal(t, test.expErr, err)
-		})
-	}
-}
+---
+# What is cucumber?
+
+Gherkin has the following keywords:
+
+```gherkin
+Given a precondition
+ And another precondition
+When I do an action
+Then I should have some result
+ And I should have some other result
 ```
 
 ---
-In cucumber, you would write the tests in natural language:
+# What is cucumber?
+
+Gherkin has the following keywords:
 
 ```gherkin
-Scenario: Money can be withdrawn if account has sufficient funds
-  Given I have an account with £100
-  When I withdraw £50
-  Then my remaining balance should be £50
+Given I seed the database with "some_test_data.sql"
+ And I login as user "admin"
+When I send a GET request to "/contacts"
+Then the response code should be OK
+ And the response body should match "some_truth_source.json"
+```
 
-Scenario: Withdrawing funds exceeding my balance errors
-  Given I have an account with £50
-  When I withdraw £100
-  Then an error should state "insufficient funds"
-  And my remaining balance should be £50
+---
+# What is cucumber?
+Cucumber tests have three entities:
+Feature -> Scenario -> Steps
+
+A feature has scenarios. And a scenario has steps.
+
+<!-- stop -->
+
+| cucumber | golang                            |
+|----------|-----------------------------------|
+| feature  | some\_test.go                     |
+| scenario | `func Test_Something(t *testing.T)` |
+| step     | `s.httpGet(req)`                  |
+
+---
+# What is cucumber?
+
+Features a store in txt files, typically having in files with a `.feature` extension.
+
+```terminal-ex
+command: bash -il
+rows: 30
+init_text: Simple package structure
+init_codeblock_lang: bash
+```
+
+---
+# What is cucumber?
+
+Cucumber works by regex matching steps with functions, and passes captured expressions into the associated function:
+
+```gherkin
+Given I login as user "admin"
+```
+
+```go
+// implementation
+sc.Step(`^I login as user "([^"]+)"$`, func(user string) error {
+    // perform login
+})
+```
+
+---
+# What is cucumber?
+
+Imagine we an account entity, and wanted to test its `Withdraw` functionality.
+
+When funds are withdrawn, the account balance is updated to reflect this withdrawal.
+
+If the funds requested exceed the balance, the balance isn't touched, instead we relay an error.
+
+<!-- stop -->
+
+The unit tests for this service may look like this:
+
+```file
+path: code/ex1/account_test.go
+lang: go
+```
+
+---
+# What is cucumber?
+The same service, using a cucumber framework, would look like so:
+
+```file
+path: code/ex2/features/account.feature
+lang: gherkin
+```
+
+<!-- stop -->
+
+Much easier read.
+
+---
+
+So how do we do this?
+
+<!-- stop -->
+
+Surely there must be code _somewhere_???
+
+<!-- stop -->
+
+The answer:
+
+https://github.com/cucumber/godog
+
+![7](src/godog_logo.png)
+
+---
+
+# Godog
+
+Godog is the golang implementation of cucumber.
+
+As you'd guess, behind the scenes there _is_ code.
+
+When a scenario is initialised, its available steps are defined via regex matching, and associate that step with a function:
+
+```go
+// ex2
+
+func InitScenario(sc *godog.ScenarioContext) {
+    ctx := struct {
+        records []string
+    }{}
+
+    sc.Step(`^I say "([^"]+)" (\d+) times$`, func(phrase string, times int64) {
+        for i := 0; i < times; i++ {
+            ctx.records = append(ctx.records, phrase)
+        }
+    })
+
+    sc.Step(`^I should have (\d+) records of "([^"]+)"$`, func(expected int64, phrase string) error {
+        if expected != len(ctx.records) {
+            return errors.Errorf("expected %d records, got %d", expected, len(ctx.records))
+        }
+
+        for i, record := range ctx.records {
+            if record != phrase {
+                return errors.Errorf("expected record %d to be %s, got %s", i, phrase, record)
+            }
+        }
+    })
+}
+```
+
+```gherkin
+Scenario: I can speak
+  Given I say "hello world" 7 times
+  Then I should have 7 records of "hello world"
 ```
 
 ---

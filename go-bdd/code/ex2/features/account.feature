@@ -1,5 +1,6 @@
 Feature: Account
   - User can withdraw from their account
+  - User withdrawing surplus funds receivees an error
 
   Scenario: Money can be withdrawn if account has sufficient funds
     Given I have an account with £100

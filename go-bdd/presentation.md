@@ -64,44 +64,113 @@ Then the response code should be OK
 
 ---
 # What is cucumber?
-Cucumber tests have three entities:
-Feature -> Scenario -> Steps
+Cucumber tests have three main entities:
 
-A feature has scenarios. And a scenario has steps.
+## Steps
+A single instruction. These are written in natural language, and are akin to well define functions in an integration test suite, such as `s.createUser(dbConn)`.
 
 <!-- stop -->
 
-| cucumber | golang                            |
-|----------|-----------------------------------|
-| feature  | some\_test.go                     |
-| scenario | `func Test_Something(t *testing.T)` |
-| step     | `s.httpGet(req)`                  |
+```gherkin
+Given I login as "admin"
+```
+```gherkin
+Then the response body should match "account_created.json"
+```
 
----
-# What is cucumber?
+<!-- stop -->
 
-Features a store in txt files, typically having in files with a `.feature` extension.
+## Scenario
+A collection of steps structured to test some functionality, or test case. Scenarios are given a description declaring what exactly they are testing.
 
-```terminal-ex
-command: bash -il
-rows: 30
-init_text: Simple package structure
-init_codeblock_lang: bash
+Think of a scenario as a `Test` function in your integration test suite, `func TestAccount_Create(t *testing.T)`
+
+<!-- stop -->
+
+```file
+path: src/examples/feature_header.feature
+lang: gherkin
+lines:
+    start: 7
+    end: 12
+```
+
+<!-- stop -->
+
+## Features
+The feature being tested.  Features give a description of what should be tested, and can declare rules / criteria for documentation purposes.
+
+Features are akin to `_test.go` files in your integration test suite.
+
+<!-- stop -->
+
+```file
+path: src/examples/feature_header.feature
+lang: gherkin
+lines:
+    start: 0
+    end: 6
 ```
 
 ---
 # What is cucumber?
 
-Cucumber works by regex matching steps with functions, and passes captured expressions into the associated function:
+Putting all this together we get:
+```file
+path: src/examples/feature_header.feature
+lang: gherkin
+```
+
+---
+# Ok, where does go come into this?
+
+Obviously we can't just run these feature files, we need to somehow link our natural langauge with code. Ideally, we'd use a framework provided from the cucumber group.
+
+Luckily, we have just that.
+
+<!-- stop -->
+
+![15](src/imgs/godog_logo.png) 
+
+https://github.com/cucumber/godog
+
+---
+
+# Using godog
+
+There are two ways to bake godog into your test suite.
+
+1. Using \*testing.T
+<!-- stop -->
+
+1. Using \*testing.M
+<!-- stop-->
+
+Both of these are fine, but for this talk we're doing to focus on \*testing.M as it is, in my opinion, easier for integration testing.
+
+---
+
+To make our steps executable they are paired with functions, and on a regex match that function is executed with any captured expressions provided as parameters.
+
+<!-- stop -->
 
 ```gherkin
-Given I login as user "admin"
+Then the response code should be CREATED
 ```
 
 ```go
 // implementation
-sc.Step(`^I login as user "([^"]+)"$`, func(user string) error {
-    // perform login
+sc.Step(`Then the response code should be (\w+)$`, func(status string) error {
+    code, ok := map[string]int{
+        "OK":      http.StatusOK,
+        "CREATED": http.StatusCreated,
+        // etc
+    }[status]
+    if !ok {
+        return errors.Errorf("unrecognised status code '%s'", status)
+    }
+
+    // check status code
 })
 ```
 
@@ -120,6 +189,7 @@ The unit tests for this service may look like this:
 
 ```file
 path: code/ex1/account_test.go
+transform: sed 's/\t/    /g'
 lang: go
 ```
 
@@ -274,6 +344,20 @@ Scenario: Eaten food is removed from plate
 ```
 
 ---
+# What is cucumber?
+
+Features a store in txt files, typically having in files with a `.feature` extension.
+
+```terminal-ex
+command: zsh -il
+rows: 30
+init_text: tree -I vendor code/ex2
+init_wait: '> '
+init_codeblock_lang: zsh
+```
+
+
+---
 # What's wrong with Golang?
 
 The problem isn't with golang in particular, but instead writing usage tests in a programming language.
@@ -388,21 +472,20 @@ and requires a 200 status code. If we want granularity we have to implement more
 Well what about...
 ```go
 func (s *e2eTestSuite) Test_EndToEnd_GetAllArticle() {
-    s.NoError(s.dbInsert(model.Article{
-            Title:   "my-title",
-            Author:  "my-author",
-            Content: "my-content",
+    s.NoError(s.dbInsert(model.SignUp{
+            Email:    "mycoolemail@wow.com",
+            Password: "abc123",
         }
     ))
 
     headers := http.Header{}
     headers.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 
-    respBody, statusCode, err := s.httpGet("/articles", headers)
+    respBody, statusCode, err := s.httpGet("/createaccount", headers)
     s.NoError(err)
     s.Equal(http.StatusOK, response.StatusCode)
 
-    s.Equal(`{"status":200,"message":"Success","data":[{"id":1,"title":"my-title","content":"my-content","author":"my-author"}]}`, strings.Trim(string(respBody), "\n"))
+    s.Equal(`{"status":200,"message":"Success","data":[{"id":1,"email":"mycoolemail@wow.com"}]}`, strings.Trim(string(respBody), "\n"))
     response.Body.Close()
 }
 ```

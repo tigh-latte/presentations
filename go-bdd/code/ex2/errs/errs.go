@@ -1,11 +1,12 @@
 package errs
 
-type Ex1Err string
+type AccountError string
 
 const (
-	ErrInsufficientFunds Ex1Err = "insufficient funds"
+	ErrInsufficientFunds AccountError = "insufficient funds"
+	ErrEmptyDeposit      AccountError = "empty transaction"
 )
 
-func (e Ex1Err) Error() string {
+func (e AccountError) Error() string {
 	return string(e)
 }

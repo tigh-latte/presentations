@@ -1,6 +1,7 @@
 package ex2_test
 
 import (
+	"context"
 	"os"
 	"testing"
 	"time"
@@ -8,6 +9,11 @@ import (
 	"github.com/Tigh-Gherr/presentations/go-bdd/code/ex2"
 	"github.com/cucumber/godog"
 	"github.com/pkg/errors"
+)
+
+type (
+	accountKey struct{}
+	errKey     struct{}
 )
 
 func TestMain(m *testing.M) {
@@ -22,50 +28,58 @@ func TestMain(m *testing.M) {
 	os.Exit(s.Run())
 }
 
-type TestContext struct {
-	Account *ex2.Account
-	Error   error
-}
-
 func initScenario(sc *godog.ScenarioContext) {
-	ctx := &TestContext{}
-
-	sc.Step(`^I have an account with £(\d+)$`, ctx.iHaveAnAccountWith)
-	sc.Step(`^I withdraw £(\d+)$`, ctx.iWithdraw)
-	sc.Step(`^an error should state "([^"]+)"$`, ctx.anErrorShouldState)
-	sc.Step(`^my remaining balance should be £(\d+)$`, ctx.myRemainingBalanceShouldBe)
+	sc.Step(`^I have an account with £(\d+)$`, iHaveAnAccountWith)
+	sc.Step(`^I withdraw £(\d+)$`, iWithdraw)
+	sc.Step(`^an error should state "([^"]+)"$`, anErrorShouldState)
+	sc.Step(`^my remaining balance should be £(\d+)$`, myRemainingBalanceShouldBe)
+	sc.Step(`^I deposit £(\d+)$`, iDeposit)
 
 	sc.BeforeStep(func(step *godog.Step) {
 		time.Sleep(500 * time.Millisecond)
 	})
 }
 
-func (t *TestContext) iHaveAnAccountWith(balance int64) {
-	t.Account = &ex2.Account{
+func Value[K, V any](ctx context.Context) V {
+	return ctx.Value(*new(K)).(V)
+}
+
+func iHaveAnAccountWith(ctx context.Context, balance int64) context.Context {
+	return context.WithValue(ctx, accountKey{}, &ex2.Account{
 		Balance: balance,
-	}
+	})
 }
 
-func (t *TestContext) iWithdraw(amount int64) {
-	_, t.Error = t.Account.Withdraw(amount)
+func iWithdraw(ctx context.Context, amount int64) context.Context {
+	account := Value[accountKey, *ex2.Account](ctx)
+	_, err := account.Withdraw(amount)
+	return context.WithValue(ctx, errKey{}, err)
 }
 
-func (t *TestContext) myRemainingBalanceShouldBe(remaining int64) error {
-	if t.Account.Balance != remaining {
-		return errors.Errorf("unexpected balance: want %d got %d", remaining, t.Account.Balance)
-	}
-
-	return nil
+func iDeposit(ctx context.Context, amount int64) context.Context {
+	account := Value[accountKey, *ex2.Account](ctx)
+	_, err := account.Deposit(amount)
+	return context.WithValue(ctx, errKey{}, err)
 }
 
-func (t *TestContext) anErrorShouldState(err string) error {
-	if t.Error == nil {
-		return errors.Errorf("expecting error '%s', got nil", err)
+func myRemainingBalanceShouldBe(ctx context.Context, remaining int64) (context.Context, error) {
+	account := Value[accountKey, *ex2.Account](ctx)
+	if account.Balance != remaining {
+		return ctx, errors.Errorf("unexpected balance: want %d got %d", remaining, account.Balance)
 	}
 
-	if t.Error.Error() != err {
-		return errors.Errorf("expecting error '%s', got '%s'", err, t.Error.Error())
+	return ctx, nil
+}
+
+func anErrorShouldState(ctx context.Context, errMsg string) (context.Context, error) {
+	err := Value[errKey, error](ctx)
+	if err == nil {
+		return ctx, errors.Errorf("expecting error '%s', got nil", errMsg)
 	}
 
-	return nil
+	if err.Error() != errMsg {
+		return ctx, errors.Errorf("expecting error '%s', got '%s'", errMsg, err.Error())
+	}
+
+	return ctx, nil
 }

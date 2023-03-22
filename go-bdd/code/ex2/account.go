@@ -15,3 +15,13 @@ func (a *Account) Withdraw(amount int64) (int64, error) {
 
 	return amount, nil
 }
+
+func (a *Account) Deposit(amount int64) (int64, error) {
+	if amount == 0 {
+		return 0, errs.ErrEmptyDeposit
+	}
+
+	a.Balance += amount
+
+	return amount, nil
+}

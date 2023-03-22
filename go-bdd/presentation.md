@@ -201,20 +201,17 @@ lines:
 
 ## Wiring up our steps
 
-Inside the scenario initialiser we:
-1. build our scenario's context, an entity holding all information needed for a test case.
-<!-- stop -->
+Inside the scenario initialiser we map all naturual langauge steps to a corresponding golang function.
 
-1. map all naturual langauge steps to a corresponding golang function. To share data between these functions, we create a shared context that's specific to that scenario.
 <!-- stop -->
 
 ```file
 path: code/ex2/account_test.go
 lang: go
-transform: sed 's/\t/   /g;/BeforeStep\|time.Sleep\|})/d;'
+transform: sed 's/\t/   /g;/BeforeStep\|time.Sleep\|})\|deposit/d;'
 lines:
-  start: 23
-  end: 39
+  start: 30
+  end: 37
 ```
 
 ---
@@ -222,7 +219,10 @@ lines:
 # Show me the golang!
 ## Wiring up our steps
 
-And each of these functions mutate the state of the context.
+Step functions can:
+- take `context.Context` as their first argument. If this is present, godog will build and supply a context.
+- return `context.Context` as their first return. If this is present, godog will pass the returned context to future steps.
+- take types parameters.
 
 ```file
 path: code/ex2/account_test.go

@@ -83,7 +83,7 @@ Then the response body should match "account_created.json"
 ## Scenario
 A collection of steps structured to test some functionality, or test case. Scenarios are given a description declaring what exactly they are testing.
 
-Think of a scenario as a `Test` function in your integration test suite, `func TestAccount_Create(t *testing.T)`
+Think of a scenario as a `Test` function in your integration test suite, `func TestAccount_Create(t *testing.T)`. Like a test function, they are independent and can be executed concurrently.
 
 <!-- stop -->
 
@@ -149,32 +149,6 @@ There are two ways to bake godog into your test suite.
 Both of these are fine, but for this talk we're doing to focus on \*testing.M as it is, in my opinion, easier for integration testing.
 
 ---
-
-To make our steps executable they are paired with functions, and on a regex match that function is executed with any captured expressions provided as parameters.
-
-<!-- stop -->
-
-```gherkin
-Then the response code should be CREATED
-```
-
-```go
-// implementation
-sc.Step(`Then the response code should be (\w+)$`, func(status string) error {
-    code, ok := map[string]int{
-        "OK":      http.StatusOK,
-        "CREATED": http.StatusCreated,
-        // etc
-    }[status]
-    if !ok {
-        return errors.Errorf("unrecognised status code '%s'", status)
-    }
-
-    // check status code
-})
-```
-
----
 # What is cucumber?
 
 Imagine we an account entity, and wanted to test its `Withdraw` functionality.
@@ -201,36 +175,121 @@ The same service, using a cucumber framework, would look like so:
 path: code/ex2/features/account.feature
 lang: gherkin
 ```
-
 <!-- stop -->
 
 Much easier read.
 
 ---
 
-So how do we do this?
+# Show me the golang!
 
+## Getting started
+
+To begin, we create our `TestMain` function and build our test suite struct:
+
+```file
+path: code/ex2/account_test.go
+lang: go
+transform: sed 's/\t/   /g'
+lines:
+  start: 11
+  end: 24
+```
+
+---
+# Show me the golang!
+
+## Wiring up our steps
+
+Inside the scenario initialiser we:
+1. build our scenario's context, an entity holding all information needed for a test case.
 <!-- stop -->
 
-Surely there must be code _somewhere_???
-
+1. map all naturual langauge steps to a corresponding golang function. To share data between these functions, we create a shared context that's specific to that scenario.
 <!-- stop -->
 
-The answer:
-
-https://github.com/cucumber/godog
-
-![7](src/godog_logo.png)
+```file
+path: code/ex2/account_test.go
+lang: go
+transform: sed 's/\t/   /g;/BeforeStep\|time.Sleep\|})/d;'
+lines:
+  start: 23
+  end: 39
+```
 
 ---
 
-# Godog
+# Show me the golang!
+## Wiring up our steps
 
-Godog is the golang implementation of cucumber.
+And each of these functions mutate the state of the context.
 
-As you'd guess, behind the scenes there _is_ code.
+```file
+path: code/ex2/account_test.go
+lang: go
+transform: sed 's/\t/   /g'
+lines:
+  start: 41
+  end: null
+```
 
-When a scenario is initialised, its available steps are defined via regex matching, and associate that step with a function:
+---
+# Show me the golang!
+
+## And that's it!
+
+We now have a test suite we can run.
+
+<!-- stop -->
+
+```terminal-ex
+command: zsh -il
+rows: 30
+init_text: cd code/ex2/; go test -v ./account_test.go
+init_wait: '> '
+init_codeblock_lang: zsh
+```
+
+
+---
+# Show me the golang!
+
+## Defining a step
+
+Within our scenario initialiser, we wire up any/all steps that scenario might expect (generally all of them).
+
+```file
+path: src/examples/bank/test/integration/integration_test.go
+lang: go
+transform: sed 's/\t/   /g'
+lines:
+  start: 20
+  end: null
+```
+---
+
+```gherkin
+Then the response code should be CREATED
+```
+
+```go
+// implementation
+sc.Step(`Then the response code should be (\w+)$`, func(status string) error {
+    code, ok := map[string]int{
+        "OK":      http.StatusOK,
+        "CREATED": http.StatusCreated,
+        // etc
+    }[status]
+    if !ok {
+        return errors.Errorf("unrecognised status code '%s'", status)
+    }
+
+    // check status code
+})
+```
+
+To make a step executable they are paired with functions, and on a regex match that function is executed with any captured expressions provided as parameters.
+
 
 ```go
 // ex2

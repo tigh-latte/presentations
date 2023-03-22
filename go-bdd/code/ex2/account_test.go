@@ -1,40 +1,43 @@
 package ex2_test
 
 import (
+	"os"
 	"testing"
+	"time"
 
 	"github.com/Tigh-Gherr/presentations/go-bdd/code/ex2"
 	"github.com/cucumber/godog"
 	"github.com/pkg/errors"
 )
 
+func TestMain(m *testing.M) {
+	s := godog.TestSuite{
+		ScenarioInitializer: initScenario,
+		Options: &godog.Options{
+			Format: "pretty",
+			Paths:  []string{"features"},
+		},
+	}
+
+	os.Exit(s.Run())
+}
+
 type TestContext struct {
 	Account *ex2.Account
 	Error   error
 }
 
-func TestAccount_Withdrawal(t *testing.T) {
-	s := godog.TestSuite{
-		ScenarioInitializer: InitScenario,
-		Options: &godog.Options{
-			Format:   "pretty",
-			Paths:    []string{"features"},
-			TestingT: t,
-		},
-	}
-
-	if s.Run() != 0 {
-		t.Fatal("holy hell")
-	}
-}
-
-func InitScenario(sc *godog.ScenarioContext) {
+func initScenario(sc *godog.ScenarioContext) {
 	ctx := &TestContext{}
 
 	sc.Step(`^I have an account with £(\d+)$`, ctx.iHaveAnAccountWith)
 	sc.Step(`^I withdraw £(\d+)$`, ctx.iWithdraw)
 	sc.Step(`^an error should state "([^"]+)"$`, ctx.anErrorShouldState)
 	sc.Step(`^my remaining balance should be £(\d+)$`, ctx.myRemainingBalanceShouldBe)
+
+	sc.BeforeStep(func(step *godog.Step) {
+		time.Sleep(500 * time.Millisecond)
+	})
 }
 
 func (t *TestContext) iHaveAnAccountWith(balance int64) {

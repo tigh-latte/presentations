@@ -22,6 +22,9 @@ func (a *accountRest) Register(e *echo.Group) {
 	e.GET("/accounts", a.list)
 	e.POST("/accounts", a.create)
 	e.GET("/accounts/:id", a.get)
+
+	e.GET("/accounts/:id/balance", a.getBalance)
+	e.GET("/accounts/:id/action", a.postAction)
 }
 
 func (a *accountRest) list(c echo.Context) error {
@@ -61,4 +64,41 @@ func (a *accountRest) create(e echo.Context) error {
 	}
 
 	return e.JSON(http.StatusCreated, acc)
+}
+
+func (a *accountRest) getBalance(e echo.Context) error {
+	id, err := strconv.ParseInt(e.Param("id"), 10, 64)
+	if err != nil {
+		return errs.ErrBadRequest
+	}
+
+	acc, err := a.svc.GetByID(e.Request().Context(), bank.GetAccountArgs{
+		ID: id,
+	})
+	if err != nil {
+		return err
+	}
+
+	return e.JSON(http.StatusOK, struct {
+		Balance int64 `json:"balance"`
+	}{
+		Balance: acc.Balance,
+	})
+}
+
+func (a *accountRest) postAction(e echo.Context) error {
+	id, err := strconv.ParseInt(e.Param("id"), 10, 64)
+	if err != nil {
+		return errs.ErrBadRequest
+	}
+
+	acc, err := a.svc.GetByID(e.Request().Context(), bank.GetAccountArgs{
+		ID: id,
+	})
+	if err != nil {
+		return err
+	}
+
+	_ = acc
+	return e.NoContent(http.StatusNoContent)
 }

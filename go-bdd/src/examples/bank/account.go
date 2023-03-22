@@ -12,6 +12,11 @@ type Account struct {
 	Balance int64  `json:"balance"`
 }
 
+type AccountAction struct {
+	Type   string
+	Amoutn int64
+}
+
 type GetAccountArgs struct {
 	ID int64 `db:"id"`
 }

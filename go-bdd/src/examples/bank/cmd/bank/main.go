@@ -3,13 +3,14 @@ package main
 import (
 	"context"
 	"database/sql"
-	"fmt"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
 	"github.com/Tigh-Gherr/presentations/go-bdd/src/examples/bank/api/rest"
+	"github.com/Tigh-Gherr/presentations/go-bdd/src/examples/bank/errs"
 	"github.com/Tigh-Gherr/presentations/go-bdd/src/examples/bank/repo"
 	"github.com/Tigh-Gherr/presentations/go-bdd/src/examples/bank/service"
 	"github.com/labstack/echo"
@@ -38,7 +39,25 @@ func run() error {
 			return
 		}
 
-		fmt.Println(err)
+		type errResp struct {
+			Status  int    `json:"status"`
+			Message string `json:"message"`
+		}
+
+		if errors.Is(err, errs.ErrBadRequest) {
+			c.JSON(http.StatusBadRequest, errResp{
+				Status:  http.StatusBadRequest,
+				Message: errs.ErrBadRequest.Error(),
+			})
+			return
+		}
+		if errors.Is(err, errs.ErrConflict) {
+			c.JSON(http.StatusConflict, errResp{
+				Status:  http.StatusConflict,
+				Message: errs.ErrConflict.Error(),
+			})
+			return
+		}
 
 		e.DefaultHTTPErrorHandler(err, c)
 	}

@@ -11,6 +11,8 @@ extensions:
 
 BDD Development in Golang, using Cucumber
 
+![22](src/imgs/scientist.png)
+
 ---
 # What is BDD?
 
@@ -27,10 +29,10 @@ This brings the advantage of:
 
 <!-- stop -->
 
-- Non-technical members of an organisation can understand / contribute to test suites
+- Non-technical members of an organisation can understand & contribute to test suites
 <!-- stop -->
 
-- Developers who are less familiar / experienced can understand / contribute to test suites
+- Developers who are less familiar / experienced can understand & contribute to test suites
 <!-- stop -->
 
 - The tests themselves can become firm, unambiguous acceptance requirements
@@ -165,6 +167,9 @@ The unit tests for this service may look like this:
 path: code/ex1/account_test.go
 transform: sed 's/\t/    /g'
 lang: go
+lines:
+  start: 9
+  end: null
 ```
 
 ---
@@ -174,9 +179,10 @@ The same service, using a cucumber framework, would look like so:
 ```file
 path: code/ex2/features/account.feature
 lang: gherkin
+transform: 'sed /@account/d'
 lines:
    start: 0
-   end: 16
+   end: 14
 ```
 <!-- stop -->
 
@@ -193,10 +199,10 @@ To begin, we create our `TestMain` function and build our test suite struct:
 ```file
 path: code/ex2/account_test.go
 lang: go
-transform: sed 's/\t/   /g'
+transform: sed 's/\t/   /g;/flag/d'
 lines:
-  start: 18
-  end: 29
+  start: 21
+  end: 35
 ```
 
 ---
@@ -213,8 +219,24 @@ path: code/ex2/account_test.go
 lang: go
 transform: sed 's/\t/   /g;/BeforeStep\|time.Sleep\|})\|deposit/d;'
 lines:
-  start: 30
-  end: 37
+  start: 39
+  end: 45
+```
+
+---
+# Show me the golang!
+
+## Wiring up our steps
+
+We can also define `BeforeStep`, `AfterStep`, `BeforeScenario` and `AfterScenario` hooks.
+
+```file
+path: code/ex2/account_test.go
+lang: go
+transform: sed 's/\t/   /g;/deposit/d;'
+lines:
+  start: 39
+  end: 48
 ```
 
 ---
@@ -225,15 +247,15 @@ lines:
 Step functions can:
 - take `context.Context` as their first argument. If this is present, godog will build and supply a context.
 - return `context.Context` as their first return. If this is present, godog will pass the returned context to future steps.
-- take types parameters.
+- take typed parameters.
 
 ```file
 path: code/ex2/account_test.go
 lang: go
 transform: sed 's/\t/   /g'
 lines:
-  start: 41
-  end: null
+  start: 49
+  end: 87
 ```
 
 ---
@@ -253,22 +275,83 @@ init_wait: '> '
 init_codeblock_lang: zsh
 ```
 
-
 ---
-# Show me the golang!
+# Running a subset
+With the `testing.M` approach, all test execution is done via the godog api.
 
-## Defining a step
+Luckily godog exposes a nice way to run a subset of tests.
 
-Within our scenario initialiser, we wire up any/all steps that scenario might expect (generally all of them).
+<!-- stop -->
+
+Let's say we added new `Deposit` functionality to our service, and wanted to run only these deposit tests:
 
 ```file
-path: src/examples/bank/test/integration/integration_test.go
-lang: go
-transform: sed 's/\t/   /g'
-lines:
-  start: 20
-  end: null
+path: code/ex2/features/account.feature
+lang: gherkin
+transform: sed '/ *\(When\|Then\|And\)/d;s/^.*Given.*$/   \# Scenario definition/g'
 ```
+
+---
+# Running a subset
+
+We can then selectively run these scenarios with the `--godog.tags=` flag:
+
+<!-- stop -->
+
+```terminal-ex
+command: zsh -il
+rows: 30
+init_text: cd code/ex2/; go test -v ./account_test.go --godog.tags=deposit
+init_wait: '> '
+init_codeblock_lang: zsh
+```
+
+---
+# Running randomly
+
+Scenarios can be executed in a random order using `--godog.random`, ensuring tests are not dependent on one another
+
+<!-- stop -->
+
+```terminal-ex
+command: zsh -il
+rows: 30
+init_text: cd code/ex2/; go test -v ./account_test.go --godog.random
+init_wait: '> '
+init_codeblock_lang: zsh
+```
+
+---
+# Running concurrently
+
+Scenarios can be executed concurrently using `--godog.concurrency=num_procs`:
+
+<!-- stop -->
+
+```terminal-ex
+command: zsh -il
+rows: 30
+init_text: cd code/ex2/; go test -v ./account_test.go --godog.concurrency=4
+init_wait: '> '
+init_codeblock_lang: zsh
+```
+
+---
+# So this relatively contrived example is cool and all, but like, we're still a long way away from integration tests!
+
+Some basic functions of integration test suites are:
+1. Direct database access to prime data
+<!-- stop -->
+
+2. Some http or grpc client to perform requests
+<!-- stop -->
+
+3. Test data, in the form of structs in the code, or files on the filesystem.
+
+<!-- stop -->
+
+So let's add these!
+
 ---
 
 ```gherkin

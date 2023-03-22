@@ -6,7 +6,9 @@ import (
 	"errors"
 
 	"github.com/Tigh-Gherr/presentations/go-bdd/src/examples/bank"
+	"github.com/Tigh-Gherr/presentations/go-bdd/src/examples/bank/errs"
 	"github.com/Tigh-Gherr/presentations/go-bdd/src/examples/bank/repo/account"
+	"github.com/lib/pq"
 )
 
 type accountRepo struct {
@@ -43,6 +45,11 @@ func (a *accountRepo) List(ctx context.Context) ([]bank.Account, error) {
 func (a *accountRepo) Create(ctx context.Context, acc bank.Account) (bank.Account, error) {
 	var id int64
 	if err := a.db.QueryRowContext(ctx, account.CreateAccount, acc.Email, acc.Balance).Scan(&id); err != nil {
+		if pqErr, ok := err.(*pq.Error); ok {
+			if pqErr.Code == "23505" {
+				return bank.Account{}, errs.ErrConflict
+			}
+		}
 		return bank.Account{}, err
 	}
 	return bank.Account{

@@ -2,6 +2,7 @@ package ex2_test
 
 import (
 	"context"
+	"flag"
 	"os"
 	"testing"
 	"time"
@@ -16,13 +17,21 @@ type (
 	errKey     struct{}
 )
 
+func init() {
+	godog.BindFlags("godog.", flag.CommandLine, &opts)
+}
+
+var opts = godog.Options{
+	Format: "pretty",
+	Paths:  []string{"features"},
+}
+
 func TestMain(m *testing.M) {
+	flag.Parse()
+	opts.Paths = flag.Args()
 	s := godog.TestSuite{
 		ScenarioInitializer: initScenario,
-		Options: &godog.Options{
-			Format: "pretty",
-			Paths:  []string{"features"},
-		},
+		Options:             &opts,
 	}
 
 	os.Exit(s.Run())
@@ -34,7 +43,6 @@ func initScenario(sc *godog.ScenarioContext) {
 	sc.Step(`^an error should state "([^"]+)"$`, anErrorShouldState)
 	sc.Step(`^my remaining balance should be £(\d+)$`, myRemainingBalanceShouldBe)
 	sc.Step(`^I deposit £(\d+)$`, iDeposit)
-
 	sc.BeforeStep(func(step *godog.Step) {
 		time.Sleep(500 * time.Millisecond)
 	})
@@ -56,30 +64,30 @@ func iWithdraw(ctx context.Context, amount int64) context.Context {
 	return context.WithValue(ctx, errKey{}, err)
 }
 
+func myRemainingBalanceShouldBe(ctx context.Context, remaining int64) error {
+	account := Value[accountKey, *ex2.Account](ctx)
+	if account.Balance != remaining {
+		return errors.Errorf("unexpected balance: want %d got %d", remaining, account.Balance)
+	}
+
+	return nil
+}
+
+func anErrorShouldState(ctx context.Context, errMsg string) error {
+	err := Value[errKey, error](ctx)
+	if err == nil {
+		return errors.Errorf("expecting error '%s', got nil", errMsg)
+	}
+
+	if err.Error() != errMsg {
+		return errors.Errorf("expecting error '%s', got '%s'", errMsg, err.Error())
+	}
+
+	return nil
+}
+
 func iDeposit(ctx context.Context, amount int64) context.Context {
 	account := Value[accountKey, *ex2.Account](ctx)
 	_, err := account.Deposit(amount)
 	return context.WithValue(ctx, errKey{}, err)
-}
-
-func myRemainingBalanceShouldBe(ctx context.Context, remaining int64) (context.Context, error) {
-	account := Value[accountKey, *ex2.Account](ctx)
-	if account.Balance != remaining {
-		return ctx, errors.Errorf("unexpected balance: want %d got %d", remaining, account.Balance)
-	}
-
-	return ctx, nil
-}
-
-func anErrorShouldState(ctx context.Context, errMsg string) (context.Context, error) {
-	err := Value[errKey, error](ctx)
-	if err == nil {
-		return ctx, errors.Errorf("expecting error '%s', got nil", errMsg)
-	}
-
-	if err.Error() != errMsg {
-		return ctx, errors.Errorf("expecting error '%s', got '%s'", errMsg, err.Error())
-	}
-
-	return ctx, nil
 }

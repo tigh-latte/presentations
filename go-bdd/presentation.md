@@ -174,6 +174,9 @@ The same service, using a cucumber framework, would look like so:
 ```file
 path: code/ex2/features/account.feature
 lang: gherkin
+lines:
+   start: 0
+   end: 16
 ```
 <!-- stop -->
 
@@ -192,8 +195,8 @@ path: code/ex2/account_test.go
 lang: go
 transform: sed 's/\t/   /g'
 lines:
-  start: 11
-  end: 24
+  start: 18
+  end: 29
 ```
 
 ---

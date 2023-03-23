@@ -399,7 +399,7 @@ lang: go
 transform: sed 's/\t/    /g;s/err/_/;/lookatme:ignore/d'
 lines:
   start: 63
-  end: 98
+  end: 97
 ```
 
 ---
@@ -411,7 +411,7 @@ path: src/examples/bank/test/integration/integration_test.go
 lang: go
 transform: sed 's/\t/    /g;;/lookatme:ignore/d'
 lines:
-  start: 98
+  start: 97
   end: 107
 ```
 
@@ -434,7 +434,7 @@ path: src/examples/bank/test/integration/integration_test.go
 lang: go
 transform: sed 's/\t/    /g;;/lookatme:ignore/d'
 lines:
-  start: 108
+  start: 106
   end: 117
 ```
 
@@ -454,9 +454,9 @@ Given the headers:
 ```file
 path: src/examples/bank/test/integration/integration_test.go
 lang: go
-transform: sed 's/\t/    /g;;/lookatme:ignore/d'
+transform: sed 's/\t/    /g;/lookatme:ignore/d'
 lines:
-  start: 209
+  start: 206
   end: 222
 ```
 
@@ -493,8 +493,8 @@ path: src/examples/bank/test/integration/integration_test.go
 lang: go
 transform: sed 's/\t/    /g;;/lookatme:ignore/d'
 lines:
-  start: 157
-  end: 175
+  start: 154
+  end: 173
 ```
 
 ---
@@ -509,10 +509,10 @@ Then the response body should match "errs/bad-request.json"
 ```file
 path: src/examples/bank/test/integration/integration_test.go
 lang: go
-transform: sed 's/\t/    /g;;/lookatme:ignore/d'
+transform: sed 's/\t/    /g;/lookatme:ignore/d'
 lines:
-  start: 176
-  end: 209
+  start: 173
+  end: 206
 ```
 
 ---

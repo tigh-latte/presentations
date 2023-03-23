@@ -3,6 +3,8 @@ package errs
 type Error string
 
 const (
+	ErrUnauthorized Error = "unauthorized"
+
 	ErrBadRequest Error = "bad request"
 
 	ErrInsufficientFunds Error = "insufficient funds"

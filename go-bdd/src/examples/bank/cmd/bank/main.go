@@ -9,12 +9,13 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/labstack/echo"
+	"github.com/pkg/errors"
 	"github.com/tigh-latte/presentations/go-bdd/src/examples/bank/api/rest"
+	"github.com/tigh-latte/presentations/go-bdd/src/examples/bank/api/rest/middleware"
 	"github.com/tigh-latte/presentations/go-bdd/src/examples/bank/errs"
 	"github.com/tigh-latte/presentations/go-bdd/src/examples/bank/repo"
 	"github.com/tigh-latte/presentations/go-bdd/src/examples/bank/service"
-	"github.com/labstack/echo"
-	"github.com/pkg/errors"
 
 	_ "github.com/lib/pq"
 )
@@ -33,6 +34,7 @@ func run() error {
 
 	e := echo.New()
 	g := e.Group("/api/v1")
+	g.Use(middleware.Auth(repo.NewAPIKeyRepo(db)))
 
 	e.HTTPErrorHandler = func(err error, c echo.Context) {
 		if err == nil {
@@ -44,17 +46,26 @@ func run() error {
 			Message string `json:"message"`
 		}
 
+		if errors.Is(err, errs.ErrUnauthorized) {
+			c.JSON(http.StatusUnauthorized, errResp{
+				Status:  http.StatusUnauthorized,
+				Message: err.Error(),
+			})
+			return
+
+		}
+
 		if errors.Is(err, errs.ErrBadRequest) {
 			c.JSON(http.StatusBadRequest, errResp{
 				Status:  http.StatusBadRequest,
-				Message: errs.ErrBadRequest.Error(),
+				Message: err.Error(),
 			})
 			return
 		}
 		if errors.Is(err, errs.ErrConflict) {
 			c.JSON(http.StatusConflict, errResp{
 				Status:  http.StatusConflict,
-				Message: errs.ErrConflict.Error(),
+				Message: err.Error(),
 			})
 			return
 		}

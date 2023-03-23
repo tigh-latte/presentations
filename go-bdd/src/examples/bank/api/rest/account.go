@@ -4,10 +4,10 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/tigh-latte/presentations/go-bdd/src/examples/bank"
-	"github.com/tigh-latte/presentations/go-bdd/src/examples/bank/errs"
 	"github.com/labstack/echo"
 	"github.com/pkg/errors"
+	"github.com/tigh-latte/presentations/go-bdd/src/examples/bank"
+	"github.com/tigh-latte/presentations/go-bdd/src/examples/bank/errs"
 )
 
 type accountRest struct {

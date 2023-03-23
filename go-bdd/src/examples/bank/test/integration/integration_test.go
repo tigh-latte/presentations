@@ -14,10 +14,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/tigh-latte/presentations/go-bdd/src/examples/bank/test/integration/data"
 	"github.com/cucumber/godog"
 	"github.com/cucumber/godog/colors"
 	"github.com/pkg/errors"
+	"github.com/tigh-latte/presentations/go-bdd/src/examples/bank/test/integration/data"
 	"github.com/yazgazan/jaydiff/diff"
 
 	_ "github.com/lib/pq"
@@ -30,8 +30,9 @@ var sqlData embed.FS
 var httpData embed.FS
 
 type (
-	httpCodeKey struct{}
-	httpRespKey struct{}
+	httpHeaderKey struct{}
+	httpCodeKey   struct{}
+	httpRespKey   struct{}
 )
 
 var opts = godog.Options{
@@ -56,7 +57,8 @@ type Suite struct {
 }
 
 func Value[K, V any](ctx context.Context) V {
-	return ctx.Value(*new(K)).(V)
+	v, _ := ctx.Value(*new(K)).(V)
+	return v
 }
 
 func TestMain(m *testing.M) {
@@ -105,6 +107,7 @@ func (s *Suite) initScenario(sc *godog.ScenarioContext) {
 	sc.Step(`^the response status is (\w+)`, s.theResponseCodeShouldBe)
 	sc.Step(`^the response status should be (\w+)`, s.theResponseCodeShouldBe)
 	sc.Step(`^the response body should match "([^"]+)"`, s.theResponseBodyShouldMatch)
+	sc.Step(`^the headers:$`, s.theHeaders)
 }
 
 func (s *Suite) iRunTheSQL(ctx context.Context, file string) error {
@@ -121,6 +124,11 @@ func (s *Suite) iMakeARequestTo(ctx context.Context, verb, endpoint string) (con
 	req, err := http.NewRequest(verb, s.url.JoinPath(endpoint).String(), nil)
 	if err != nil {
 		return ctx, errors.Wrapf(err, "failed to make request '%s %s'", verb, endpoint)
+	}
+	if headers := Value[httpHeaderKey, http.Header](ctx); headers != nil {
+		for k := range headers {
+			req.Header.Set(k, headers.Get(k))
+		}
 	}
 
 	resp, err := s.http.Do(req)
@@ -147,6 +155,11 @@ func (s *Suite) iMakeARequestToUsing(ctx context.Context, verb, endpoint, file s
 	if err != nil {
 		return ctx, errors.Wrapf(err, "failed to make request '%s %s'", verb, endpoint)
 	}
+	if headers := Value[httpHeaderKey, http.Header](ctx); headers != nil {
+		for k := range headers {
+			req.Header.Set(k, headers.Get(k))
+		}
+	}
 
 	resp, err := s.http.Do(req)
 	if err != nil {
@@ -164,10 +177,11 @@ func (s *Suite) iMakeARequestToUsing(ctx context.Context, verb, endpoint, file s
 
 func (s *Suite) theResponseCodeShouldBe(ctx context.Context, status string) error {
 	want, ok := map[string]int{
-		"OK":          http.StatusOK,
-		"CREATED":     http.StatusCreated,
-		"BAD_REQUEST": http.StatusBadRequest,
-		"CONFLICT":    http.StatusConflict,
+		"OK":           http.StatusOK,
+		"CREATED":      http.StatusCreated,
+		"BAD_REQUEST":  http.StatusBadRequest,
+		"UNAUTHORIZED": http.StatusUnauthorized,
+		"CONFLICT":     http.StatusConflict,
 	}[status]
 	if !ok {
 		return errors.Errorf("unrecognised response code '%s'", status)
@@ -211,4 +225,15 @@ func (s *Suite) theResponseBodyShouldMatch(ctx context.Context, file string) err
 	})
 
 	return errors.Errorf(report)
+}
+
+func (s *Suite) theHeaders(ctx context.Context, table *godog.Table) context.Context {
+	headers := Value[httpHeaderKey, http.Header](ctx)
+	if headers == nil {
+		headers = http.Header{}
+	}
+	for _, row := range table.Rows[1:] {
+		headers.Set(row.Cells[0].Value, row.Cells[1].Value)
+	}
+	return context.WithValue(ctx, httpHeaderKey{}, headers)
 }

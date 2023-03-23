@@ -476,7 +476,7 @@ lang: go
 transform: sed 's/\t/    /g;;/lookatme:ignore/d'
 lines:
   start: 121
-  end: 156
+  end: 155
 ```
 
 ---
@@ -525,3 +525,231 @@ init_text: cd src/examples/bank
 init_wait: '> '
 init_codeblock_lang: zsh
 ```
+
+---
+
+# What's possible
+
+HTTP and DB connections are cool and all, but we can take this much further.
+
+## S3 actions
+
+```gherkin
+Given I put the files into buckets:
+  | bucket       | file         |
+  | my-bucket    | file.txt     |
+  | other-bucket | holyhell.jpg |
+```
+
+<!-- stop -->
+
+```go
+func (s *Suite) IPutFilesIntoBuckets(ctx context.Context, table *godog.Table) error {
+    for _, row := range table.Rows[1:] {
+        bucket := row.Cells[0].Value
+        file := row.Cells[1].Value
+
+        bb, err := s.testData.Load(file)
+        if err != nil {
+            return errors.Wrapf(err, "failed to load file '%s'", row.Cells[1].Value)
+        }
+        if _, err = s.s3.PutObject(ctx, &s3.PutObjectInput{
+                Bucket: aws.String(bucket),
+                Body:   bytes.NewReader(bb),
+                Key:    aws.String(file),
+        }); err != nil {
+            return errors.Wrap(err, "failed to put file")
+        }
+    }
+    return nil
+}
+```
+
+---
+
+# What's possible
+
+## S3 actions
+
+```gherkin
+Given I delete these files from buckets:
+  | my-bucket    | file.txt     |
+  | other-bucket | holyhell.jpg |
+```
+
+```go
+func (s *Suite) IDeleteFilesFromS3(ctx context.Context, table *godog.Table) error {
+    for _, row := range table.Rows[1:] {
+        file := row.Cells[0].Value
+        bucket := row.Cells[1].Value
+
+        list, err := s3Client.ListObjectsV2(context.TODO(), &s3.ListObjectsV2Input{
+            Bucket: aws.String(bucket),
+            Prefix: aws.String(file),
+        })
+        if err != nil {
+            return errors.Wrap(err, "failed to list files to be deleted")
+        }
+
+        objects := make([]types.ObjectIdentifier, len(list.Contents))
+        for i, v := range list.Contents {
+            objects[i] = types.ObjectIdentifier{
+                Key: v.Key,
+            }
+        }
+
+        if len(objects) == 0 {
+            return nil
+        }
+
+        if _, err := s.s3.DeleteObjects(ctx, &s3.DeleteObjectsInput{
+            Bucket: aws.String(file),
+            Delete: &types.Delete{
+                Objects: objects,
+            },
+        }); err != nil {
+            return errors.Wrap(err, "failed to put file")
+        }
+    }
+    return nil
+}
+```
+
+---
+
+# What's possible
+
+## RabbitMQ fun
+
+We can get some really nice queue monitoring functionality with a little bit of setup work.
+
+<!-- stop -->
+
+Up front, we declare what queues on which exchanges we want the test suite to subscribe to
+
+```go
+var rmqSubs = []RabbitMQSubscription{{
+    Exchange:   "accounts=exchange",
+    RoutingKey: "bank.account.created",
+}}
+```
+
+<!-- stop -->
+
+Then we build a map of exchange to queuegroup subscriptions
+
+```go
+    m := map[string][]string{}
+    for _, sub := range rmqSubs {
+        if _, ok := m[sub.Exchange]; !ok {
+            m[sub.Exchange] = []string{}
+        }
+        m[sub.Exchange] = append(m[sub.Exchange], sub.RoutingKey)
+    }
+
+    for exch, routingKeys := range m {
+        qg := // create queuegroup for routingKeys
+
+        s.rmqExchMap.Store(exch, qg)
+    }
+```
+
+<!-- stop -->
+
+THEN, the queue group has its own internal mapping of routing keys to channels.
+
+```go
+type queueGroup struct {
+    routingKeys []string
+    chans       syncmap.NewMap[string, chan amqp.Delivery](),
+}
+
+func (q *queueGroup) Connect() {
+    for _, rk := range q.routingKeys {
+        ch, _ := rmq.Consume(/* args */)
+        q.chans.Store(rk, ch)
+    }
+}
+
+func (q *queueGroup) C(name string) <-chan amqp.Delivery {
+    ch, _ := q.chans.Get(name)
+    return ch
+}
+```
+
+---
+
+# What's possible
+
+## Reading a message from a queue
+
+```gherkin
+When I wait for a message on "accounts-exchange/bank.account.created"
+```
+
+<!-- stop -->
+
+```go
+func (s *Suite) IReadARabbitMQMessage(ctx, rk string) (context.Context, error) {
+    qg, ok := s.rmqExchMap.Get(exch)
+    if !ok {
+        return errors.Errorf("exchange '%s' not registed: %#v", exch, exchangeMap)
+    }
+
+    tCtx, cancel := context.WithTimeout(ctx, 10 * time.Second)
+    defer cancel()
+
+    select {
+    case msg = <-qg.C(rk):
+        return context.WithValue(ctx, rmqMsgKey{}, msg)
+    case <-tCtx.Done():
+        return ctx, errors.New("timed out")
+    }
+
+    return ctx, nil
+}
+```
+
+# What's possible
+
+## Check the amount of messages in a queue
+
+```gherkin
+Then there should be 7 messages on "accounts-exchange/bank.account.updated"
+```
+
+```go
+func (s *Suite) ThereShouldNBeRabbitMQMessages(ctx context.Context, exp int, exch, rk string) error {
+    qg, ok := exchangeMap.Get(exch)
+    if !ok {
+        return errors.Errorf("exchange '%s' not registed: %#v", exch, exchangeMap)
+    }
+
+    total := len(qg.C(rk))
+    if exp != total {
+        return errors.Errorf("unexpected number of messages on queue '%s'. wanted '%d' got '%d'", rk, exp, total)
+    }
+
+    return nil
+}
+```
+
+---
+
+# What's possible
+
+## Watch this space
+
+SO, I am currently working on open sourcing a library that provides a lot of this functionality out of the box.
+
+Hopefully V2 of this presentation will have a working example of most of these concepts.
+
+---
+
+# THANK YOU
+
+That's a wrap.
+
+<!-- stop -->
+
+Holy hell.

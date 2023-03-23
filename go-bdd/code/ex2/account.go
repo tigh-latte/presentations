@@ -1,6 +1,6 @@
 package ex2
 
-import "github.com/Tigh-Gherr/presentations/go-bdd/code/ex2/errs"
+import "github.com/tigh-latte/presentations/go-bdd/code/ex2/errs"
 
 type Account struct {
 	Balance int64

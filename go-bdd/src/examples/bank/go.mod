@@ -1,4 +1,4 @@
-module github.com/Tigh-Gherr/presentations/go-bdd/src/examples/bank
+module github.com/tigh-latte/presentations/go-bdd/src/examples/bank
 
 go 1.20
 

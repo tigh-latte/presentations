@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/Tigh-Gherr/presentations/go-bdd/src/examples/bank"
-	"github.com/Tigh-Gherr/presentations/go-bdd/src/examples/bank/errs"
+	"github.com/tigh-latte/presentations/go-bdd/src/examples/bank"
+	"github.com/tigh-latte/presentations/go-bdd/src/examples/bank/errs"
 	"github.com/labstack/echo"
 	"github.com/pkg/errors"
 )

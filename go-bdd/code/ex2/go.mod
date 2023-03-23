@@ -1,4 +1,4 @@
-module github.com/Tigh-Gherr/presentations/go-bdd/code/ex2
+module github.com/tigh-latte/presentations/go-bdd/code/ex2
 
 go 1.20
 

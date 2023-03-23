@@ -3,8 +3,8 @@ package ex1_test
 import (
 	"testing"
 
-	"github.com/Tigh-Gherr/presentations/go-bdd/code/ex1"
-	"github.com/Tigh-Gherr/presentations/go-bdd/code/ex1/errs"
+	"github.com/tigh-latte/presentations/go-bdd/code/ex1"
+	"github.com/tigh-latte/presentations/go-bdd/code/ex1/errs"
 	"gotest.tools/assert"
 )
 

@@ -9,10 +9,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/Tigh-Gherr/presentations/go-bdd/src/examples/bank/api/rest"
-	"github.com/Tigh-Gherr/presentations/go-bdd/src/examples/bank/errs"
-	"github.com/Tigh-Gherr/presentations/go-bdd/src/examples/bank/repo"
-	"github.com/Tigh-Gherr/presentations/go-bdd/src/examples/bank/service"
+	"github.com/tigh-latte/presentations/go-bdd/src/examples/bank/api/rest"
+	"github.com/tigh-latte/presentations/go-bdd/src/examples/bank/errs"
+	"github.com/tigh-latte/presentations/go-bdd/src/examples/bank/repo"
+	"github.com/tigh-latte/presentations/go-bdd/src/examples/bank/service"
 	"github.com/labstack/echo"
 	"github.com/pkg/errors"
 

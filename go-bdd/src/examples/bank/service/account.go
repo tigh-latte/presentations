@@ -3,8 +3,8 @@ package service
 import (
 	"context"
 
-	"github.com/Tigh-Gherr/presentations/go-bdd/src/examples/bank"
-	"github.com/Tigh-Gherr/presentations/go-bdd/src/examples/bank/errs"
+	"github.com/tigh-latte/presentations/go-bdd/src/examples/bank"
+	"github.com/tigh-latte/presentations/go-bdd/src/examples/bank/errs"
 	"github.com/pkg/errors"
 	"gopkg.in/guregu/null.v3"
 )

@@ -1,7 +1,7 @@
 package ex1
 
 import (
-	"github.com/Tigh-Gherr/presentations/go-bdd/code/ex1/errs"
+	"github.com/tigh-latte/presentations/go-bdd/code/ex1/errs"
 )
 
 type Account struct {

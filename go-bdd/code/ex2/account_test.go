@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Tigh-Gherr/presentations/go-bdd/code/ex2"
+	"github.com/tigh-latte/presentations/go-bdd/code/ex2"
 	"github.com/cucumber/godog"
 	"github.com/pkg/errors"
 )

@@ -5,9 +5,9 @@ import (
 	"database/sql"
 	"errors"
 
-	"github.com/Tigh-Gherr/presentations/go-bdd/src/examples/bank"
-	"github.com/Tigh-Gherr/presentations/go-bdd/src/examples/bank/errs"
-	"github.com/Tigh-Gherr/presentations/go-bdd/src/examples/bank/repo/account"
+	"github.com/tigh-latte/presentations/go-bdd/src/examples/bank"
+	"github.com/tigh-latte/presentations/go-bdd/src/examples/bank/errs"
+	"github.com/tigh-latte/presentations/go-bdd/src/examples/bank/repo/account"
 	"github.com/lib/pq"
 )
 

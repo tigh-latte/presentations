@@ -14,7 +14,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Tigh-Gherr/presentations/go-bdd/src/examples/bank/test/integration/data"
+	"github.com/tigh-latte/presentations/go-bdd/src/examples/bank/test/integration/data"
 	"github.com/cucumber/godog"
 	"github.com/cucumber/godog/colors"
 	"github.com/pkg/errors"

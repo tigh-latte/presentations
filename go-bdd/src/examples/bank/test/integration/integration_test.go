@@ -7,7 +7,6 @@ import (
 	"embed"
 	"encoding/json"
 	"flag"
-	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -141,7 +140,6 @@ func (s *Suite) iMakeARequestToUsing(ctx context.Context, verb, endpoint, file s
 	}
 	if headers := Value[httpHeaderKey, http.Header](ctx); headers != nil {
 		for k := range headers {
-			fmt.Println("TIGH", k)
 			req.Header.Set(k, headers.Get(k))
 		}
 	}

@@ -7,6 +7,7 @@ import (
 	"embed"
 	"encoding/json"
 	"flag"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -62,12 +63,12 @@ func Value[K, V any](ctx context.Context) V {
 }
 
 func TestMain(m *testing.M) {
-	flag.Parse()
-
+	flag.Parse() //lookatme:ignore
+	//lookatme:ignore
 	db, err := sql.Open("postgres", "postgresql://dev:dev@0.0.0.0/dev?sslmode=disable")
-	if err != nil {
-		panic(err)
-	}
+	if err != nil { // lookatme:ignore
+		panic(err) // lookatme:ignore
+	} // lookatme:ignore
 
 	s := &Suite{
 		url: url.URL{
@@ -102,12 +103,12 @@ func TestMain(m *testing.M) {
 
 func (s *Suite) initScenario(sc *godog.ScenarioContext) {
 	sc.Step(`^I run the SQL "([^"]+)"$`, s.iRunTheSQL)
-	sc.Step(`^I make a (GET|POST) request to "([^"]+)"$`, s.iMakeARequestTo)
-	sc.Step(`^I make a (GET|POST) request to "([^"]+)" using "([^"]+)"$`, s.iMakeARequestToUsing)
+	sc.Step(`^the headers:$`, s.theHeaders)
+	sc.Step(`^I make a (GET|POST|PATCH|PUT|DELETE) request to "([^"]+)"$`, s.iMakeARequestTo)
+	sc.Step(`^I make a (GET|POST|PATCH|PUT|DELETE) request to "([^"]+)" using "([^"]+)"$`, s.iMakeARequestToUsing)
 	sc.Step(`^the response status is (\w+)`, s.theResponseCodeShouldBe)
 	sc.Step(`^the response status should be (\w+)`, s.theResponseCodeShouldBe)
 	sc.Step(`^the response body should match "([^"]+)"`, s.theResponseBodyShouldMatch)
-	sc.Step(`^the headers:$`, s.theHeaders)
 }
 
 func (s *Suite) iRunTheSQL(ctx context.Context, file string) error {
@@ -121,42 +122,26 @@ func (s *Suite) iRunTheSQL(ctx context.Context, file string) error {
 }
 
 func (s *Suite) iMakeARequestTo(ctx context.Context, verb, endpoint string) (context.Context, error) {
-	req, err := http.NewRequest(verb, s.url.JoinPath(endpoint).String(), nil)
-	if err != nil {
-		return ctx, errors.Wrapf(err, "failed to make request '%s %s'", verb, endpoint)
-	}
-	if headers := Value[httpHeaderKey, http.Header](ctx); headers != nil {
-		for k := range headers {
-			req.Header.Set(k, headers.Get(k))
-		}
-	}
-
-	resp, err := s.http.Do(req)
-	if err != nil {
-		return ctx, errors.Wrapf(err, "failed to perform request '%s %s'", verb, endpoint)
-	}
-
-	bb, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return ctx, errors.Wrapf(err, "failed to read body for request '%s %s'", verb, endpoint)
-	}
-
-	ctx = context.WithValue(ctx, httpCodeKey{}, resp.StatusCode)
-	return context.WithValue(ctx, httpRespKey{}, bb), nil
+	return s.iMakeARequestToUsing(ctx, verb, endpoint, "")
 }
 
 func (s *Suite) iMakeARequestToUsing(ctx context.Context, verb, endpoint, file string) (context.Context, error) {
-	reqBody, err := s.reqs.Load(file)
-	if err != nil {
-		return ctx, errors.Wrapf(err, "failed to load req '%s'", file)
+	var body io.Reader
+	if file != "" {
+		reqBody, err := s.reqs.Load(file)
+		if err != nil {
+			return ctx, errors.Wrapf(err, "failed to load req '%s'", file)
+		}
+		body = bytes.NewReader(reqBody)
 	}
 
-	req, err := http.NewRequest(verb, s.url.JoinPath(endpoint).String(), bytes.NewReader(reqBody))
+	req, err := http.NewRequest(verb, s.url.JoinPath(endpoint).String(), body)
 	if err != nil {
 		return ctx, errors.Wrapf(err, "failed to make request '%s %s'", verb, endpoint)
 	}
 	if headers := Value[httpHeaderKey, http.Header](ctx); headers != nil {
 		for k := range headers {
+			fmt.Println("TIGH", k)
 			req.Header.Set(k, headers.Get(k))
 		}
 	}
@@ -233,7 +218,10 @@ func (s *Suite) theHeaders(ctx context.Context, table *godog.Table) context.Cont
 		headers = http.Header{}
 	}
 	for _, row := range table.Rows[1:] {
-		headers.Set(row.Cells[0].Value, row.Cells[1].Value)
+		key := row.Cells[0].Value
+		value := row.Cells[1].Value
+
+		headers.Set(key, value)
 	}
 	return context.WithValue(ctx, httpHeaderKey{}, headers)
 }

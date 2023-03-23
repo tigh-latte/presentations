@@ -90,11 +90,11 @@ Think of a scenario as a `Test` function in your integration test suite, `func T
 <!-- stop -->
 
 ```file
-path: src/examples/feature_header.feature
+path: src/examples/bank/test/integration/features/account.feature
 lang: gherkin
 lines:
-    start: 7
-    end: 12
+    start: 8
+    end: 16
 ```
 
 <!-- stop -->
@@ -107,19 +107,19 @@ Features are akin to `_test.go` files in your integration test suite.
 <!-- stop -->
 
 ```file
-path: src/examples/feature_header.feature
+path: src/examples/bank/test/integration/features/account.feature
 lang: gherkin
 lines:
     start: 0
-    end: 6
+    end: 7
 ```
 
 ---
 # What is cucumber?
 
-Putting all this together we get:
+Putting this all this together we get:
 ```file
-path: src/examples/feature_header.feature
+path: src/examples/bank/test/integration/features/account.feature
 lang: gherkin
 ```
 
@@ -354,302 +354,174 @@ So let's add these!
 
 ---
 
-```gherkin
-Then the response code should be CREATED
+# Build a global suite
+
+We're going to want a test suite struct that holds global clients to be used across scenarios:
+
+```file
+path: src/examples/bank/test/integration/integration_test.go
+lang: go
+transform: sed 's/\t/    /g'
+lines:
+  start: 47
+  end: 58
 ```
 
-```go
-// implementation
-sc.Step(`Then the response code should be (\w+)$`, func(status string) error {
-    code, ok := map[string]int{
-        "OK":      http.StatusOK,
-        "CREATED": http.StatusCreated,
-        // etc
-    }[status]
-    if !ok {
-        return errors.Errorf("unrecognised status code '%s'", status)
-    }
+<!-- stop -->
 
-    // check status code
-})
+```file
+path: src/examples/bank/test/integration/data/data.go
+lang: go
+transform: sed 's/\t/    /g'
+lines:
+  start: 7
+  end: null
 ```
 
-To make a step executable they are paired with functions, and on a regex match that function is executed with any captured expressions provided as parameters.
+<!-- stop -->
 
-
-```go
-// ex2
-
-func InitScenario(sc *godog.ScenarioContext) {
-    ctx := struct {
-        records []string
-    }{}
-
-    sc.Step(`^I say "([^"]+)" (\d+) times$`, func(phrase string, times int64) {
-        for i := 0; i < times; i++ {
-            ctx.records = append(ctx.records, phrase)
-        }
-    })
-
-    sc.Step(`^I should have (\d+) records of "([^"]+)"$`, func(expected int64, phrase string) error {
-        if expected != len(ctx.records) {
-            return errors.Errorf("expected %d records, got %d", expected, len(ctx.records))
-        }
-
-        for i, record := range ctx.records {
-            if record != phrase {
-                return errors.Errorf("expected record %d to be %s, got %s", i, phrase, record)
-            }
-        }
-    })
-}
-```
-
-```gherkin
-Scenario: I can speak
-  Given I say "hello world" 7 times
-  Then I should have 7 records of "hello world"
+```file
+path: src/examples/bank/test/integration/integration_test.go
+lang: go
+transform: sed 's/\t/    /g'
+lines:
+  start: 25
+  end: 31
 ```
 
 ---
-# Example
 
-Take the following golang unit test:
+# Let's build this suite
 
-```go
-// models.go
-type Plate struct {
-    Contents PlateItems
-}
-
-type PlateItems map[PlateItem]int
-
-type PlateItem int
-
-const (
-    PlateItemSausage      PlateItem = iota
-    PlateItemBacon
-    PlateItemEggsPoached
-    PlateItemToastSlice
-)
-
-type Person struct {}
-
-func (p Person) EatFrom(plate *Plate, items PlateItems) {
-    // definition
-}
-
-// person_test.go
-func Test_Eat(t *testing.T) {
-    person := models.Person{}
-
-    plate := models.Plate{
-        Contents: models.PlateItems{
-            models.PlateItemSausage:     2,
-            models.PlateItemBacon:       3,
-            models.PlateItemEggsPoached: 2,
-            models.PlateItemToastSlice:  2,
-        }
-    }
-
-    person.EatFrom(&plate, models.PlateItems{
-        models.PlateItemSausage:    1,
-        models.PlateItemToastSlice: 2,
-    })
-
-    assert.Equal(t, plate, &models.PlateItems{
-        models.PlateItemSausage:     1,
-        models.PlateItemBacon:       3,
-        models.PlateItemEggsPoached: 2,
-    })
-}
+```file
+path: src/examples/bank/test/integration/integration_test.go
+lang: go
+transform: sed 's/\t/    /g;s/err/_/;/lookatme:ignore/d'
+lines:
+  start: 63
+  end: 98
 ```
 
 ---
-# A world in cucumber
-The same test couple be written as follows:
+
+# Define our steps
+
+```file
+path: src/examples/bank/test/integration/integration_test.go
+lang: go
+transform: sed 's/\t/    /g;;/lookatme:ignore/d'
+lines:
+  start: 98
+  end: 107
+```
+
+<!-- stop -->
+
+Notice that the step funcs now have `Suite` as a receiver. This is so they can access the db connection and http client.
+
+---
+
+# Running SQL from a database connection
+
 ```gherkin
-Scenario: Eaten food is removed from plate
-  Given I have a plate with:
-    | item           | quantity |
-    | sausage        | 2        |
-    | bacon          | 3        |
-    | poached egg    | 2        |
-    | slice of toast | 2        |
-  When I eat:
-    | item           | quantity |
-    | sausage        | 1        |
-    | slice of toast | 2        |
-  Then the plate should be left with:
-    | item           | quantity |
-    | sausage        | 1        |
-    | bacon          | 3        |
-    | poached egg    | 2        |
+Given I run the SQL "init_dev_data.sql"
+```
 
+<!-- stop -->
+
+```file
+path: src/examples/bank/test/integration/integration_test.go
+lang: go
+transform: sed 's/\t/    /g;;/lookatme:ignore/d'
+lines:
+  start: 108
+  end: 117
 ```
 
 ---
-# What is cucumber?
 
-Features a store in txt files, typically having in files with a `.feature` extension.
+# Setting headers for a http request
 
+```gherkin
+Given the headers:
+  | key           | value      |
+  | Authorization | Bearer dev |
+  | X-Request-ID  | 12345      |
+```
+
+<!-- stop -->
+
+```file
+path: src/examples/bank/test/integration/integration_test.go
+lang: go
+transform: sed 's/\t/    /g;;/lookatme:ignore/d'
+lines:
+  start: 209
+  end: 222
+```
+
+---
+
+# Making a http request
+
+```gherkin
+When I make a POST request to "/api/v1/myendpoint" using "POST-my-request.json"
+```
+
+<!-- stop -->
+
+```file
+path: src/examples/bank/test/integration/integration_test.go
+lang: go
+transform: sed 's/\t/    /g;;/lookatme:ignore/d'
+lines:
+  start: 121
+  end: 156
+```
+
+---
+
+# Checking the response code (incomplete)
+```gherkin
+Then the response status should be BAD_REQUEST
+```
+
+<!-- stop -->
+
+```file
+path: src/examples/bank/test/integration/integration_test.go
+lang: go
+transform: sed 's/\t/    /g;;/lookatme:ignore/d'
+lines:
+  start: 157
+  end: 175
+```
+
+---
+
+# Finally, checking the response body
+```gherkin
+Then the response body should match "errs/bad-request.json"
+```
+
+<!-- stop -->
+
+```file
+path: src/examples/bank/test/integration/integration_test.go
+lang: go
+transform: sed 's/\t/    /g;;/lookatme:ignore/d'
+lines:
+  start: 176
+  end: 209
+```
+
+---
+
+# Filesystem walkthrough
 ```terminal-ex
 command: zsh -il
-rows: 30
-init_text: tree -I vendor code/ex2
+rows: 34
+init_text: cd src/examples/bank
 init_wait: '> '
 init_codeblock_lang: zsh
 ```
-
-
----
-# What's wrong with Golang?
-
-The problem isn't with golang in particular, but instead writing usage tests in a programming language.
-
-To understand why this is a problem we should consider what makes a test suite a good.
-
----
-# A good test suite
-
-Follows the "even juniors" rule.
-
-1. Is extendable.
-      - Even juniors should be able to make meaning contributions.
-2. Is approachable
-      - Even juniors should be able to understand it.
-3. Covers core usage cases.
-
-4. Acts as documentation for the codebase.
-
----
-# 1. Is understandable.
-
-Code is easy to write, but hard to read.
-
-In the same vein, navigation code that adheres to good principles involves lots of jumping about.
-
----
-# Why?
-
-Writing tests is boring.
-
-Writing integration tests are especially boring.
-
-Reading integration tests is worse.
-
----
-# Problems with Golang based integration tests
-
-As mentioned, the tests are hard to read.
-
-Code is easy to write, but hard to read.
-
-No matter how extensive the documentation, you will have codebases that
-do the same thing in vastly different ways.
-
-So naturally a test framework written in native code will have
-the same problems.
-
----
-# Example
-
-Take this example found from medium.com after searching "golang integration tests":
-
-```go
-func (s *e2eTestSuite) Test_EndToEnd_GetAllArticle() {
-    article := model.Article{
-        Title:   "my-title",
-        Author:  "my-author",
-        Content: "my-content",
-    }
-
-    s.NoError(s.dbConn.Create(&article).Error)
-
-    req, err := http.NewRequest(echo.GET, fmt.Sprintf("http://localhost:%d/articles", s.port), nil)
-    s.NoError(err)
-
-    req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
-
-    client := http.Client{}
-    response, err := client.Do(req)
-    s.NoError(err)
-    s.Equal(http.StatusOK, response.StatusCode)
-
-    byteBody, err := ioutil.ReadAll(response.Body)
-    s.NoError(err)
-
-    s.Equal(`{"status":200,"message":"Success","data":[{"id":1,"title":"my-title","content":"my-content","author":"my-author"}]}`, strings.Trim(string(byteBody), "\n"))
-    response.Body.Close()
-}
-```
-
-Almost all of this is boilerplate that needs to be duplicated in future tests.
-
----
-# Example
-
-Let's make it less boilerplate via well defined functions:
-
-```go
-func (s *e2eTestSuite) Test_EndToEnd_GetAllArticle() {
-    s.NoError(s.dbInsert(model.Article{
-            Title:   "my-title",
-            Author:  "my-author",
-            Content: "my-content",
-        }
-    ))
-
-    respBody, err := s.httpGetJSONMustOK("/articles")
-    s.NoError(err)
-
-    s.Equal(`{"status":200,"message":"Success","data":[{"id":1,"title":"my-title","content":"my-content","author":"my-author"}]}`, strings.Trim(string(respBody), "\n"))
-    response.Body.Close()
-}
-```
-
-This is definitely better, but now we have a highly specific `httpGetJSONMustOK` function which assignes headers
-and requires a 200 status code. If we want granularity we have to implement more specfic use case functions.
-
----
-# Example
-
-Well what about...
-```go
-func (s *e2eTestSuite) Test_EndToEnd_GetAllArticle() {
-    s.NoError(s.dbInsert(model.SignUp{
-            Email:    "mycoolemail@wow.com",
-            Password: "abc123",
-        }
-    ))
-
-    headers := http.Header{}
-    headers.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
-
-    respBody, statusCode, err := s.httpGet("/createaccount", headers)
-    s.NoError(err)
-    s.Equal(http.StatusOK, response.StatusCode)
-
-    s.Equal(`{"status":200,"message":"Success","data":[{"id":1,"email":"mycoolemail@wow.com"}]}`, strings.Trim(string(respBody), "\n"))
-    response.Body.Close()
-}
-```
-
----
-# What about this?
-
-```gherkin
-Scenario: I can retrieve all articles
-  Given I seed the database with "insert_article.sql"
-  When I send a GET request to "/articles"
-  Then the http response code should be OK
-  And the response should match "articles.json"
-```
-
----
-# Or this
-Scenario: I can retrieve all articles
-  Given an aritcle in the database
-  When I retrieve all articles
-  Then the http response code should be OK
-  And the response should match all articles

@@ -27,7 +27,7 @@ func main() {
 }
 
 func run() error {
-	db, err := sql.Open("postgres", "postgresql://dev:dev@0.0.0.0/dev?sslmode=disable")
+	db, err := sql.Open("postgres", "postgresql://dev:dev@db/dev?sslmode=disable")
 	if err != nil {
 		return errors.Wrap(err, "failed to connect to database")
 	}
@@ -52,9 +52,7 @@ func run() error {
 				Message: err.Error(),
 			})
 			return
-
 		}
-
 		if errors.Is(err, errs.ErrBadRequest) {
 			c.JSON(http.StatusBadRequest, errResp{
 				Status:  http.StatusBadRequest,

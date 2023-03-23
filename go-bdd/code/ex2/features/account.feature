@@ -22,7 +22,7 @@ Feature: Account
     Then my remaining balance should be £150
 
   @account @deposit @error
-  Scenario: Depositing no money errors
+  Scenario: Depositing an empty sum errors
     Given I have an account with £50
     When I deposit £0
     Then an error should state "empty transaction"

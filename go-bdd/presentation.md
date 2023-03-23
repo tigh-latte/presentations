@@ -20,26 +20,30 @@ An extension of TDD (I know...) that emphasizes feature development around user 
 
 I'm assuming we, for the most part, use user stories here.
 
+<!-- stop -->
+
+# What is cucumber testing?
+
+A test process written in the gherkin format which expresses tests in natual language.
+
+Having tests written in natural languages brings the advantages of:
+
+<!-- stop -->
+
+- Enabling non-technical members of an organisation to understand & (potentially) contribute to test suites
+<!-- stop -->
+
+- Enabling developers who are less familiar / experienced to understand & contribute to test suites
+<!-- stop -->
+
+- Making the tests themselves become firm, unambiguous acceptance requirements
+<!-- stop -->
+
+- Writing tests in a natural language forces us to make good abstractions, as bad abstractions stick out / really badly.
+
+
 ---
-# What is cucumber?
-
-A test process written in the gherkin language, which expresses tests in natual language.
-
-This brings the advantage of:
-
-<!-- stop -->
-
-- Non-technical members of an organisation can understand & contribute to test suites
-<!-- stop -->
-
-- Developers who are less familiar / experienced can understand & contribute to test suites
-<!-- stop -->
-
-- The tests themselves can become firm, unambiguous acceptance requirements
-
-
----
-# What is cucumber?
+# What is cucumber testing?
 
 Gherkin has the following keywords:
 
@@ -52,7 +56,7 @@ Then I should have some result
 ```
 
 ---
-# What is cucumber?
+# What is cucumber testing?
 
 Gherkin has the following keywords:
 
@@ -65,8 +69,9 @@ Then the response code should be OK
 ```
 
 ---
-# What is cucumber?
-Cucumber tests have three main entities:
+# What is cucumber testing?
+
+A cucmber test suite has three main entities:
 
 ## Steps
 A single instruction. These are written in natural language, and are akin to well define functions in an integration test suite, such as `s.createUser(dbConn)`.
@@ -82,10 +87,10 @@ Then the response body should match "account_created.json"
 
 <!-- stop -->
 
-## Scenario
+## Scenarios
 A collection of steps structured to test some functionality, or test case. Scenarios are given a description declaring what exactly they are testing.
 
-Think of a scenario as a `Test` function in your integration test suite, `func TestAccount_Create(t *testing.T)`. Like a test function, they are independent and can be executed concurrently.
+Think of a scenario as a `Test` function in your integration test suite, `func TestAccount_Create(t *testing.T)`. Like a test function, they are independent, do not rely on any other scenario to mutate state, and can be executed concurrently.
 
 <!-- stop -->
 
@@ -115,7 +120,7 @@ lines:
 ```
 
 ---
-# What is cucumber?
+# What is cucumber testing?
 
 Putting this all this together we get:
 ```file
@@ -153,11 +158,11 @@ Both of these are fine, but for this talk we're doing to focus on \*testing.M as
 ---
 # What is cucumber?
 
-Imagine we an account entity, and wanted to test its `Withdraw` functionality.
+Imagine we have an account entity, and wanted to test its `Withdraw` functionality.
 
 When funds are withdrawn, the account balance is updated to reflect this withdrawal.
 
-If the funds requested exceed the balance, the balance isn't touched, instead we relay an error.
+If the funds requested exceed the balance, the balance isn't touched and instead we relay an error.
 
 <!-- stop -->
 
@@ -245,9 +250,9 @@ lines:
 ## Wiring up our steps
 
 Step functions can:
-- take `context.Context` as their first argument. If this is present, godog will build and supply a context.
-- return `context.Context` as their first return. If this is present, godog will pass the returned context to future steps.
-- take typed parameters.
+- take `context.Context` as their first argument. Godog builds a `context.Context` for each scenario, and if this parameter is present, it provides the `context.Context` to the function.
+- return `context.Context` as their first return. If returned, godog passes this new `context.Context` to following steps.
+- take typed parameters. These are provided by regex matching.
 
 ```file
 path: code/ex2/account_test.go
@@ -276,14 +281,15 @@ init_codeblock_lang: zsh
 ```
 
 ---
-# Running a subset
+# Running a subset of tests
+
 With the `testing.M` approach, all test execution is done via the godog api.
 
 Luckily godog exposes a nice way to run a subset of tests.
 
 <!-- stop -->
 
-Let's say we added new `Deposit` functionality to our service, and wanted to run only these deposit tests:
+Let's say we added new `Deposit` functionality to our service, and we only want to run these new deposit tests:
 
 ```file
 path: code/ex2/features/account.feature
@@ -292,9 +298,9 @@ transform: sed '/ *\(When\|Then\|And\)/d;s/^.*Given.*$/   \# Scenario definition
 ```
 
 ---
-# Running a subset
+# Running a subset of tests
 
-We can then selectively run these scenarios with the `--godog.tags=` flag:
+We can then selectively run scenarios with the `--godog.tags=` flag:
 
 <!-- stop -->
 
@@ -307,9 +313,9 @@ init_codeblock_lang: zsh
 ```
 
 ---
-# Running randomly
+# Random execution order
 
-Scenarios can be executed in a random order using `--godog.random`, ensuring tests are not dependent on one another
+Scenarios can be executed in a random order using `--godog.random`, helping to ensure that our tests' states are independent.
 
 <!-- stop -->
 
@@ -322,7 +328,7 @@ init_codeblock_lang: zsh
 ```
 
 ---
-# Running concurrently
+# Conccurent execution
 
 Scenarios can be executed concurrently using `--godog.concurrency=num_procs`:
 

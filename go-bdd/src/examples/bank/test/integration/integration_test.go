@@ -46,12 +46,12 @@ func init() {
 }
 
 type Suite struct {
-	url   url.URL
-	suite godog.TestSuite
-	db    *sql.DB
-	sql   data.DataStore
-	reqs  data.DataStore
-	resps data.DataStore
+	url       url.URL
+	suite     godog.TestSuite
+	db        *sql.DB
+	sql       data.DataStore
+	httpReqs  data.DataStore
+	httpResps data.DataStore
 
 	http *http.Client
 }
@@ -83,11 +83,11 @@ func TestMain(m *testing.M) {
 			Prefix: "sql",
 			FS:     sqlData,
 		},
-		reqs: &data.DataDir{
+		httpReqs: &data.DataDir{
 			Prefix: "http/requests",
 			FS:     httpData,
 		},
-		resps: &data.DataDir{
+		httpResps: &data.DataDir{
 			Prefix: "http/responses",
 			FS:     httpData,
 		},
@@ -127,7 +127,7 @@ func (s *Suite) iMakeARequestTo(ctx context.Context, verb, endpoint string) (con
 func (s *Suite) iMakeARequestToUsing(ctx context.Context, verb, endpoint, file string) (context.Context, error) {
 	var body io.Reader
 	if file != "" {
-		reqBody, err := s.reqs.Load(file)
+		reqBody, err := s.httpReqs.Load(file)
 		if err != nil {
 			return ctx, errors.Wrapf(err, "failed to load req '%s'", file)
 		}
@@ -180,7 +180,7 @@ func (s *Suite) theResponseCodeShouldBe(ctx context.Context, status string) erro
 func (s *Suite) theResponseBodyShouldMatch(ctx context.Context, file string) error {
 	respBody := Value[httpRespKey, []byte](ctx)
 
-	expBody, err := s.resps.Load(file)
+	expBody, err := s.httpResps.Load(file)
 	if err != nil {
 		return errors.Wrapf(err, "failed to load file '%s'", file)
 	}

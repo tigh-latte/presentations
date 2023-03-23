@@ -71,7 +71,7 @@ Then the response code should be OK
 ---
 # What is cucumber testing?
 
-A cucmber test suite has three main entities:
+A cucumber test suite has three main entities:
 
 ## Steps
 A single instruction. These are written in natural language, and are akin to well define functions in an integration test suite, such as `s.createUser(dbConn)`.
@@ -362,7 +362,7 @@ So let's add these!
 
 # Build a global suite
 
-We're going to want a test suite struct that holds global clients to be used across scenarios:
+We're going to want a test suite struct that holds global clients to be used across all scenarios:
 
 ```file
 path: src/examples/bank/test/integration/integration_test.go
@@ -579,6 +579,7 @@ func (s *Suite) IPutFilesIntoBuckets(ctx context.Context, table *godog.Table) er
 
 ```gherkin
 Given I delete these files from buckets:
+  | bucket       | file         |
   | my-bucket    | file.txt     |
   | other-bucket | holyhell.jpg |
 ```
@@ -635,8 +636,8 @@ Up front, we declare what queues on which exchanges we want the test suite to su
 
 ```go
 var rmqSubs = []RabbitMQSubscription{{
-    Exchange:   "accounts=exchange",
-    RoutingKey: "bank.account.created",
+    Exchange: "accounts-exchange",
+    Queues:   "bank.account.created",
 }}
 ```
 
@@ -650,7 +651,7 @@ Then we build a map of exchange to queuegroup subscriptions
         if _, ok := m[sub.Exchange]; !ok {
             m[sub.Exchange] = []string{}
         }
-        m[sub.Exchange] = append(m[sub.Exchange], sub.RoutingKey)
+        m[sub.Exchange] = append(m[sub.Exchange], sub.Queues)
     }
 
     for exch, routingKeys := range m {
@@ -666,14 +667,14 @@ THEN, the queue group has its own internal mapping of routing keys to channels.
 
 ```go
 type queueGroup struct {
-    routingKeys []string
-    chans       syncmap.NewMap[string, chan amqp.Delivery](),
+    queues []string
+    chans  syncmap.NewMap[string, chan amqp.Delivery](),
 }
 
 func (q *queueGroup) Connect() {
-    for _, rk := range q.routingKeys {
+    for _, queue := range q.queues {
         ch, _ := rmq.Consume(/* args */)
-        q.chans.Store(rk, ch)
+        q.chans.Store(queue, ch)
     }
 }
 
@@ -696,7 +697,7 @@ When I wait for a message on "accounts-exchange/bank.account.created"
 <!-- stop -->
 
 ```go
-func (s *Suite) IReadARabbitMQMessage(ctx, rk string) (context.Context, error) {
+func (s *Suite) IReadARabbitMQMessage(ctx, exch, queue string) (context.Context, error) {
     qg, ok := s.rmqExchMap.Get(exch)
     if !ok {
         return errors.Errorf("exchange '%s' not registed: %#v", exch, exchangeMap)
@@ -706,7 +707,7 @@ func (s *Suite) IReadARabbitMQMessage(ctx, rk string) (context.Context, error) {
     defer cancel()
 
     select {
-    case msg = <-qg.C(rk):
+    case msg := <-qg.C(queue):
         return context.WithValue(ctx, rmqMsgKey{}, msg)
     case <-tCtx.Done():
         return ctx, errors.New("timed out")
@@ -716,6 +717,8 @@ func (s *Suite) IReadARabbitMQMessage(ctx, rk string) (context.Context, error) {
 }
 ```
 
+---
+
 # What's possible
 
 ## Check the amount of messages in a queue
@@ -724,16 +727,18 @@ func (s *Suite) IReadARabbitMQMessage(ctx, rk string) (context.Context, error) {
 Then there should be 7 messages on "accounts-exchange/bank.account.updated"
 ```
 
+<!-- stop -->
+
 ```go
-func (s *Suite) ThereShouldNBeRabbitMQMessages(ctx context.Context, exp int, exch, rk string) error {
+func (s *Suite) ThereShouldNBeRabbitMQMessages(ctx context.Context, exp int, exch, queue string) error {
     qg, ok := exchangeMap.Get(exch)
     if !ok {
         return errors.Errorf("exchange '%s' not registed: %#v", exch, exchangeMap)
     }
 
-    total := len(qg.C(rk))
+    total := len(qg.C(queue))
     if exp != total {
-        return errors.Errorf("unexpected number of messages on queue '%s'. wanted '%d' got '%d'", rk, exp, total)
+        return errors.Errorf("unexpected number of messages on queue '%s'. wanted '%d' got '%d'", queue, exp, total)
     }
 
     return nil

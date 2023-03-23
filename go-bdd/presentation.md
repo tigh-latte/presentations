@@ -9,7 +9,7 @@ extensions:
 ---
 # Welcome!
 
-BDD Development in Golang, using Cucumber
+BDD in Golang, using Cucumber
 
 ![22](src/imgs/scientist.png)
 
@@ -760,6 +760,10 @@ Hopefully V2 of this presentation will have a working example of most of these c
 # THANK YOU
 
 That's a wrap.
+
+<!-- stop -->
+
+Github: https://github.com/tigh-latte
 
 <!-- stop -->
 

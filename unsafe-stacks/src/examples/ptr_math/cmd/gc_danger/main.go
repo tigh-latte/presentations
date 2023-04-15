@@ -2,31 +2,31 @@ package main
 
 import (
 	"fmt"
+	"io"
+	"log"
 	"runtime"
 	"unsafe"
 )
 
 func main() {
+	log.SetOutput(io.Discard)
+
 	z := func() *int {
 		return new(int)
 	}()
 
 	fmt.Println("mem z:", z, *z)
 
-	addrZ := uintptr(unsafe.Pointer(z))
-
-	addrZ += 2
-	addrZ -= 2
+	ptr := uintptr(unsafe.Pointer(z))
 
 	runtime.GC()
 
-	var (
-		p = 7
-		q = 8
-		s = 9
-	)
+	p, q, s := 7, 8, 9
 
-	*(*int)(unsafe.Pointer(addrZ)) = 3
+	*(*int)(unsafe.Pointer(ptr)) = -19
+
+	log.Print((*[8]byte)(unsafe.Pointer(&q)))
+	log.Print((*[8]byte)(unsafe.Pointer(&ptr)))
 
 	fmt.Println("mem p:", &p, p)
 	fmt.Println("mem q:", &q, q)

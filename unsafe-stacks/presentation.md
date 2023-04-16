@@ -345,22 +345,207 @@ Modifications to the `[]byte` don't modify the cloned string.
 
 Truth be told there are three ways to do this.
 
-```go
-    bb := []byte("Hello world!")
-    s := *(*string)(unsafe.Pointer(&bb))
-    fmt.Println(s) // Output: Hello world!
+```file
+path: src/examples/casting/cmd/byteslice_to_string/main.go
+lang: go
+transform: sed 's/\t/    /g'
+lines:
+    start: 16
+    end: 22
 ```
 
 <!-- stop -->
 
-```go
-    bb := []byte("Hello world!")
-    s := unsafe.String(unsafe.SliceData(bb), len(bb))
-    fmt.Println(s) // Output: Hello world!
+```file
+path: src/examples/casting/cmd/byteslice_to_string/main.go
+lang: go
+transform: sed 's/\t/    /g'
+lines:
+    start: 23
+    end: 28
 ```
 
 <!-- stop -->
 
+```file
+path: src/examples/casting/cmd/byteslice_to_string/main.go
+lang: go
+transform: sed 's/\t/    /g'
+lines:
+    start: 29
+    end: null
+```
+
+---
+
+# Method 3
+
+```file
+path: src/examples/casting/cmd/byteslice_to_string/main.go
+lang: go
+transform: sed 's/\t/    /g'
+lines:
+    start: 29
+    end: null
+```
+
+---
+
+# Method 3
+
+```go
+type StringHeader struct {
+    Data uintptr
+    Len  int
+}
+```
+
+<!-- stop -->
+
+In memory, this looks like so:
+
+### Data
+
+| 0xc..01 | 0xc..02 | 0xc..03 | 0xc..04 | 0xc..05 | 0xc..06 | 0xc..07 | 0xc..08 |
+|---------|---------|---------|---------|---------|---------|---------|---------|
+| 80      | 1       | 2       | 0       | 192     | 0       | 0       | 0       |
+
+### Len
+
+| 0xc..09 | 0xc..0a | 0xc..0b | 0xc..0c | 0xc..0d | 0xc..0e | 0xc..0f | 0xc..10 |
+|---------|---------|---------|---------|---------|---------|---------|---------|
+| 12      | 0       | 0       | 0       | 0       | 0       | 0       | 0       |
+
+<!-- stop -->
+
+When you get the memory address of a string, you actually get the memory address of this header.
+
+```go
+    s := "Hello world!"
+    _ = &s // {Data: 0xc456...01, Len: 12}
+```
+
+---
+
+# Method 3
+
+```go
+type SliceHeader struct {
+    Data uintptr
+    Len  int
+    Cap  int
+}
+```
+
+<!-- stop -->
+
+In memory, this looks like so:
+
+### Data
+
+| 0xc..01 | 0xc..02 | 0xc..03 | 0xc..04 | 0xc..05 | 0xc..06 | 0xc..07 | 0xc..08 |
+|---------|---------|---------|---------|---------|---------|---------|---------|
+| 80      | 1       | 2       | 0       | 192     | 0       | 0       | 0       |
+
+### Len
+
+| 0xc..09 | 0xc..0a | 0xc..0b | 0xc..0c | 0xc..0d | 0xc..0e | 0xc..0f | 0xc..10 |
+|---------|---------|---------|---------|---------|---------|---------|---------|
+| 12      | 0       | 0       | 0       | 0       | 0       | 0       | 0       |
+
+### Cap
+
+| 0xc..11 | 0xc..12 | 0xc..13 | 0xc..14 | 0xc..15 | 0xc..16 | 0xc..17 | 0xc..18 |
+|---------|---------|---------|---------|---------|---------|---------|---------|
+| 16      | 0       | 0       | 0       | 0       | 0       | 0       | 0       |
+
+<!-- stop -->
+
+When you reference a slice, you actually get the memory address of this header.
+
+```go
+    bb := []byte{72, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100, 33}
+    _ = bb // {Data: 0xcff0...ab, Len: 12, Cap: 16}
+```
+
+---
+
+# Method 3
+
+```file
+path: src/examples/casting/cmd/byteslice_to_string/main.go
+lang: go
+transform: sed 's/\t/    /g'
+lines:
+    start: 29
+    end: null
+```
+
+<!-- stop -->
+
+---
+
+# Method 2
+
+```file
+path: src/examples/casting/cmd/byteslice_to_string/main.go
+lang: go
+transform: sed 's/\t/    /g'
+lines:
+    start: 23
+    end: 28
+```
+
+
+
+---
+
+# Method #1
+
+```file
+path: src/examples/casting/cmd/byteslice_to_string/main.go
+lang: go
+transform: sed 's/\t/    /g'
+lines:
+    start: 16
+    end: 22
+```
+
+`&bb` doesn't pull back the memory address holding `{72, 101, ...}`, but instead points to the __slice header__. A slice header spans 24 memory addresses, holding three pieces of information, each 8 addresses long.
+
+<!-- stop -->
+
+### Addrs 0-7
+
+The "data pointer"; the memory address of the underlying array.
+
+| 0xc..01 | 0xc..02 | 0xc..03 | 0xc..04 | 0xc..05 | 0xc..06 | 0xc..07 | 0xc..08 |
+|---------|---------|---------|---------|---------|---------|---------|---------|
+| 80      | 1       | 2       | 0       | 192     | 0       | 0       | 0       |
+
+<!-- stop -->
+
+### Addrs 8-15
+
+The length of the underlying array.
+
+| 0xc..09 | 0xc..0a | 0xc..0b | 0xc..0c | 0xc..0d | 0xc..0e | 0xc..0f | 0xc..10 |
+|---------|---------|---------|---------|---------|---------|---------|---------|
+| 12      | 0       | 0       | 0       | 0       | 0       | 0       | 0       |
+
+<!-- stop -->
+
+### Addrs 16-23
+
+The capacity of the underlying array.
+
+| 0xc..09 | 0xc..0a | 0xc..0b | 0xc..0c | 0xc..0d | 0xc..0e | 0xc..0f | 0xc..10 |
+|---------|---------|---------|---------|---------|---------|---------|---------|
+| 12      | 0       | 0       | 0       | 0       | 0       | 0       | 0       |
+
+<!-- stop -->
+
+A string header is only 16 addresses long, needing a data pointer and a length.
 
 
 ---

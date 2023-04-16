@@ -27,4 +27,9 @@ func main() {
 	fmt.Println(*b) // Output: true
 	fmt.Println(*f) // Output: NaN
 	fmt.Println(*a) // Output: [246 255 255 255 255 255 255 255]
+
+	*f = 10
+	fmt.Println(*b) // Output: false
+	fmt.Println(*i) // Output: 4621819117588971520
+	fmt.Println(*a) // Output: [0 0 0 0 0 0 36 64]
 }

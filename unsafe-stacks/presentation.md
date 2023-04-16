@@ -2,6 +2,9 @@
 theme: ./theme.json
 title: Practicing Unsafe Stacks
 author: Tighearnán Carroll
+styles:
+  table:
+      column_spacing: 3
 extensions:
   - terminal
   - file_loader
@@ -162,6 +165,70 @@ This comes in very handy, as we'll see shortly.
 
 ---
 
+# Explaining the output of these casts
+
+```file
+path: src/examples/unsafe_ptr/cmd/int_to_bool/main.go
+lang: go
+transform: sed 's/\t/    /g'
+lines:
+    start: 15
+    end: 19
+```
+
+<!-- stop -->
+
+When we write `10` to `*i`, because `*i` is an `*int`, `10` is written as an `int` would be.
+
+Let's imagine `*i` points to memory address `0xc000020158`. Writing `10` to memory touches this memory address and the 7 following it.
+
+<!-- stop -->
+
+
+| 0xc..58 | 0xc..59 | 0xc..5a | 0xc..5b | 0xc..5c | 0xc..5d | 0xc..5e | 0xc..5f |
+|---------|---------|---------|---------|---------|---------|---------|---------|
+| 1010    | 0       | 0       | 0       | 0       | 0       | 0       |  0      |
+
+---
+
+### The same thing applies to `256`.
+
+```file
+path: src/examples/unsafe_ptr/cmd/int_to_bool/main.go
+lang: go
+transform: sed 's/\t/    /g'
+lines:
+    start: 20
+    end: 25
+```
+
+<!-- stop -->
+
+| 0xc..58 | 0xc..59 | 0xc..5a | 0xc..5b | 0xc..5c | 0xc..5d | 0xc..5e | 0xc..5f |
+|---------|---------|---------|---------|---------|---------|---------|---------|
+| 0...    | 1       | 0       | 0       | 0       | 0       | 0       |  0      |
+
+---
+
+### Writing `10` again but this time to a `*float64`
+
+```file
+path: src/examples/unsafe_ptr/cmd/int_to_bool/main.go
+lang: go
+transform: sed 's/\t/    /g'
+lines:
+    start: 30
+    end: 34
+```
+
+<!-- stop -->
+
+| 0xc..58 | 0xc..59 | 0xc..5a | 0xc..5b | 0xc..5c | 0xc..5d | 0xc..5e | 0xc..5f |
+|---------|---------|---------|---------|---------|---------|---------|---------|
+| 0       | 0       | 0       | 0       | 0       | 0       | 100100  | 1000000 |
+
+---
+
 # Then we have `uintptr`
 
 This is an integer representation of an unsafe pointer, letting us do pointer arithmetic.
@@ -191,22 +258,134 @@ Take the following:
 ```file
 path: src/examples/ptr_math/cmd/gc_danger/main.go
 lang: go
-transform: sed 's/\t/    /g'
+transform: sed 's/\t/    /g;12,13d;27,29d'
 lines:
-    start: 8
+    start: 10
     end: null
-```
-
-```terminal-ex
-command: zsh -il
-rows: 10
-init_text: cd src/examples/ptr_math/; go run cmd/gc_danger/main.go
-init_wait: '> '
-init_codeblock_lang: zsh
 ```
 
 <!-- stop -->
 
+```terminal-ex
+command: zsh -il
+rows: 10
+init_text: (cd src/examples/ptr_math/; go run cmd/gc_danger/main.go)
+init_wait: '> '
+init_codeblock_lang: zsh
+```
+
+---
+
+# We get it this is dangerous! How can this boost performance?
+
+`unsafe` can boost performance in two main ways:
+
+<!-- stop -->
+
+1. Avoiding allocations, meaning less garbage needs collected
+<!-- stop -->
+
+2. Avoiding data copying, meaning less cpu.
+<!-- stop -->
+
+ a. In fact, this can turn a few O(N) operations into O(1) (And that O is a very small one)
+
+---
+
+# Casting `[]byte` to a `string`
+
+Golang, by design, doesn't have many built in operations that are `O(N)`, as this can lead to writing expensive code without even realising.
+
+Casting `[]byte` to `string` is one of these few exceptions (and visa-versa).
+
+<!-- stop -->
+
+Given that a `string` in golang is immutable but a `[]byte` isn't, in order to ensure integrity, `string([]byte)` makes a full clone of the slice of bytes, converting that clone to a `string`.
+
+```go
+    bb := []byte("Hello world!")
+    s := string(bb)
+    bb[0] = 'z'
+    fmt.Println(s) // Output: Hello world
+```
+
+---
+
+# Explaination
+
+```go
+    bb := []byte("Hello world!") // data starts at 0x20
+```
+
+Create data in memory.
+
+| 0x20 | 0x21 | 0x22 | 0x23 | 0x24 | 0x25 | 0x26 | 0x27 | 0x28 | 0x29 | 0x2a | 0x2b |
+|------|------|------|------|------|------|------|------|------|------|------|------|
+| H    | e    | l    | l    | o    |      | w    | o    | r    | l    | d    | !    |
+
+<!-- stop -->
+
+```go
+    s := string(bb) // data starts at 0xa3
+```
+
+We clone that data and have golang treat it as a `string`.
+
+| 0xa3 | 0xa4 | 0xa5 | 0xa6 | 0xa7 | 0xa8 | 0xa9 | 0xaa | 0xab | 0xac | 0xad | 0xae |
+|------|------|------|------|------|------|------|------|------|------|------|------|
+| H    | e    | l    | l    | o    |      | w    | o    | r    | l    | d    | !    |
+
+<!-- stop -->
+
+Modifications to the `[]byte` don't modify the cloned string.
+
+---
+
+# The unsafe way
+
+Truth be told there are three ways to do this.
+
+```go
+    bb := []byte("Hello world!")
+    s := *(*string)(unsafe.Pointer(&bb))
+    fmt.Println(s) // Output: Hello world!
+```
+
+<!-- stop -->
+
+```go
+    bb := []byte("Hello world!")
+    s := unsafe.String(unsafe.SliceData(bb), len(bb))
+    fmt.Println(s) // Output: Hello world!
+```
+
+<!-- stop -->
+
+
+
+---
+
+`bb` points to the starting memory address of the slice of bytes, and because this is a slice, golang will read the next 23 memory addresses as well. These 24 bytes build the slice header.
+
+<!-- stop -->
+
+The first 8 bytes build a memory, pointing to the slice's underlying array.
+
+| 0x00 | 0x01 | 0x02 | 0x03 | 0x04 | 0x05 | 0x06 | 0x07 |
+|------|------|------|------|------|------|------|------|
+| 80   | 1    | 2    | 0    | 192  | 0    | 0    | 0    |
+
+
+---
+
+# Working around this
+
+If we don't care about this integrity (because, say, our slice of bytes is about to go out of scope), we can use `unsafe.String` to force a cast.
+
+
+<!-- stop -->
+
+IF YOU ADVANCE THIS DIES
 
 <!-- stop -->
 

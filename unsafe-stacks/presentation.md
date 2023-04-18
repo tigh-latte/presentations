@@ -716,12 +716,10 @@ func MyCoolJoiner(mm []MyCoolType, div string) MyCoolType {
 ```
 ```
 
-cannot use mm (variable of type []MyCoolType) as []string value in argument to strings.Join
+err: cannot use mm (variable of type []MyCoolType) as []string value in argument to strings.Join
 ```
 
----
-
-# Casting slices
+<!-- stop -->
 
 Or this:
 
@@ -761,7 +759,7 @@ We've all probably had to do something similar before, and we've all felt worrie
 
 # Casting slices
 
-## Benchmarking the safe approach:
+## Benchmarking the safe approach
 
 <!-- stop -->
 
@@ -779,7 +777,7 @@ lines:
 
 # Casting slices
 
-## Benchmarking the safe approach:
+## Benchmarking the safe approach
 
 ```terminal-ex
 command: zsh -il
@@ -812,7 +810,7 @@ How does this perform in comparison?
 
 # Casting slices
 
-## Benchmarking the unsafe approach:
+## Benchmarking the unsafe approach
 
 <!-- stop -->
 
@@ -830,7 +828,7 @@ lines:
 
 # Casting slices
 
-## Benchmarking the safe approach:
+## Benchmarking the unsafe approach
 
 ```terminal-ex
 command: zsh -il
@@ -867,11 +865,11 @@ To understand this, we need to understand a few things:
 1. String headers.
 <!-- stop -->
 
-1. Slice headers.
-<!-- stop -->
-
 1. How golang converts to and from string types.
 <!-- stop -->
+
+1. Slice headers.
+
 
 ---
 
@@ -886,11 +884,7 @@ So what happens when we convert a string to a custom type?
     m := MyCoolType(s)
 ```
 
----
-
-# Casting slices
-
-## String headers
+<!-- stop -->
 
 Remember when we mentioned that a `*string` cares about 16 memory addresses? These 16 bytes make up a the string header.
 
@@ -924,7 +918,7 @@ This means a pointer to a string does not point to the actual characters of that
 
 ## String headers
 
-A struct representation of this exists within the `reflect` package:
+A struct representation of a string header exists within the `reflect` package:
 
 ```go
 type StringHeader struct {
@@ -933,7 +927,7 @@ type StringHeader struct {
 }
 ```
 
-This indirection of a string is how golang guarantees adding a string to a struct will only increase that structs size by 16 bytes, despite strings being variable in length.
+The indirection of a string's content via `StringHeader.Data` is how golang guarantees adding a `string` to a struct will only increase that structs size by 16 bytes, despite a `string` being variable in length.
 
 <!-- stop -->
 
@@ -954,7 +948,7 @@ This indirection of a string is how golang guarantees adding a string to a struc
 
 <!-- stop -->
 
-If we were to clone this string via `strings.Clone`, the underlying character data would be cloned in memory, and a new string header pointing to this clone would be created:
+If we clone `myString` via `strings.Clone`, the underlying character data would be cloned in memory, and a new `StringHeader` pointing to this cloned data is be created:
 
 ```go
     myString := "holy hell"
@@ -979,11 +973,11 @@ If we were to clone this string via `strings.Clone`, the underlying character da
 
 <!-- stop -->
 
-However, if we cast this string to a custom type (or the custom type to a string), the underlying data isn't cloned. Instead a new string header is created pointing to the same character array in memory:
+However, if we cast this `myString` to a custom type the underlying data isn't cloned. Instead a new `StringHeader` is created pointing to the same character array in memory:
 
 ```go
     myString := "holy hell"
-    myCoolType := MyCoolyType(myString)
+    myCoolType := MyCoolType(myString)
 ```
 
 <!-- stop -->
@@ -1048,7 +1042,7 @@ Because it isn't casting the __slice__, it's casting the __slice header__.
 
 ## Slice headers
 
-A slice header is like a string header, only they are 24 bytes long. These actual 8 determine the slice's capacity.
+A slice header is like a `StringHeader`, only they are 24 bytes long. The extra 8 bytes determine the slice's capacity.
 
 ```go
     bb := make([]string, 5, 10)
@@ -1064,15 +1058,60 @@ A slice header is like a string header, only they are 24 bytes long. These actua
 +---------------------------------------------------------------------------------------+
 | 0xc..160 | 0xd..161 | 0xc..162 | 0xc..163 | 0xc..164 | 0xc..165 | 0xc..166 | 0xc..167 | <- Length
 +----------+----------+----------+----------+----------+----------+----------+----------+
-| 01111010 | 00000001 | 0        | 0        | 0        | 0        | 0        | 0        |
+| 00000101 | 0        | 0        | 0        | 0        | 0        | 0        | 0        |
 +----------+----------+----------+----------+----------+----------+----------+----------+
 
 +---------------------------------------------------------------------------------------+
-| 0xc..161 | 0xd..169 | 0xc..16a | 0xc..16b | 0xc..16c | 0xc..16d | 0xc..16e | 0xc..16d | <- Capacity
+| 0xc..168 | 0xd..169 | 0xc..16a | 0xc..16b | 0xc..16c | 0xc..16d | 0xc..16e | 0xc..16d | <- Capacity
 +----------+----------+----------+----------+----------+----------+----------+----------+
-| 01111010 | 00000001 | 0        | 0        | 0        | 0        | 0        | 0        |
+| 00001010 | 0        | 0        | 0        | 0        | 0        | 0        | 0        |
 +----------+----------+----------+----------+----------+----------+----------+----------+
 ```
+
+---
+
+# Casting slice
+
+## Slice headers
+
+And likewise, a struct representation of a sliced header exists in `reflect`:
+
+```go
+type SliceHeader struct {
+    Data uintptr // bytes 0-7
+    Len  int     // bytes 8-15
+    Cap  int     // bytes 16-23
+}
+```
+
+
+<!-- stop -->
+
+So with the following:
+```go
+    mm := []MyCoolType{"hello", "there"}
+    ss := *(*[]string)(unsafe.Pointer(&m))
+```
+
+When we cast `mm` to a `[]string` using unsafe, we do 0 duplication of data. Instead, we create `ss` and have it point to __the exact same header__ as `mm`.
+
+<!-- stop -->
+
+```go
+    mm points to
+      |   ss points to
+      |       |
+      V       V
+    +----------------+                       +--------------+------------+--------------+
+    | Data: 0xc..158 | --------------------> | 0xc..158     | 0xc...     | 0xc..68      |
+    | Len: 2         |                       +--------------+------------+--------------+
+    | Cap: 2         |                       | StringHeader | . . .      | StringHeader |
+    +----------------+                       +--------------+------------+--------------+
+```
+
+---
+
+# Any questions so far?
 
 ---
 
@@ -1080,14 +1119,18 @@ A slice header is like a string header, only they are 24 bytes long. These actua
 
 Golang, by design, doesn't have many built in operations that are `O(N)`, as this can lead to writing expensive code without even realising.
 
-Casting `[]byte` to `string` is one of these few exceptions (and visa-versa).
+Casting `[]byte` to `string` (and visa-versa) is one of these few exceptions.
 
-<!-- stop -->
+Given that a `string` in golang is immutable but a `[]byte` isn't, in order to ensure integrity, `string([]byte)` makes a full clone of the `[]byte`.
 
-Given that a `string` in golang is immutable but a `[]byte` isn't, in order to ensure integrity, `string([]byte)` makes a full clone of the slice of bytes, converting that clone to a `string`.
+---
+
+# Casting `[]byte` to a `string`
+
+Let's explain the following:
 
 ```go
-    bb := []byte("Hello world!")
+    bb := []byte{72, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100}
     s := string(bb)
     bb[0] = 'z'
     fmt.Println(s) // Output: Hello world
@@ -1095,37 +1138,136 @@ Given that a `string` in golang is immutable but a `[]byte` isn't, in order to e
 
 ---
 
-# Explaination
+# Casting `[]byte` to a `string`
+
+We initalise a `[]byte` containing some data.
+
 
 ```go
-    bb := []byte("Hello world!") // data starts at 0x20
+ >  bb := []byte{72, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100}
+    s := string(bb)
+    bb[0] = 'z'
+    fmt.Println(s) // Output: Hello world
 ```
 
-Create data in memory.
-
-| 0x20 | 0x21 | 0x22 | 0x23 | 0x24 | 0x25 | 0x26 | 0x27 | 0x28 | 0x29 | 0x2a | 0x2b |
-|------|------|------|------|------|------|------|------|------|------|------|------|
-| H    | e    | l    | l    | o    |      | w    | o    | r    | l    | d    | !    |
-
-<!-- stop -->
-
-```go
-    s := string(bb) // data starts at 0xa3
 ```
+    bb points to
+         |
+         V
+    +----------------+                       +----------+----------+----------+
+    | Data: 0xc..158 | --------------------> | 0xc..158 | 0xc....  | 0xc..163 |
+    | Len: 11        |                       +----------+----------+----------+
+    | Cap: 11        |                       | 01001000 | . . .    | 01100100 |
+    +----------------+                       +----------+----------+----------+
 
-We clone that data and have golang treat it as a `string`.
-
-| 0xa3 | 0xa4 | 0xa5 | 0xa6 | 0xa7 | 0xa8 | 0xa9 | 0xaa | 0xab | 0xac | 0xad | 0xae |
-|------|------|------|------|------|------|------|------|------|------|------|------|
-| H    | e    | l    | l    | o    |      | w    | o    | r    | l    | d    | !    |
-
-<!-- stop -->
-
-Modifications to the `[]byte` don't modify the cloned string.
+```
 
 ---
 
-# The unsafe way
+# Casting `[]byte` to a `string`
+
+We clone `bb` and reference the cloned data as a `string`.
+
+
+```go
+    bb := []byte{72, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100}
+ >  s := string(bb)
+    bb[0] = 'z'
+    fmt.Println(s) // Output: Hello world
+```
+
+```
+         b
+         |
+         V
+    +----------------+                       +----------+----------+----------+
+    | Data: 0xc..158 | --------------------> | 0xc..158 | 0xc....  | 0xc..164 |
+    | Len: 11        |                       +----------+----------+----------+
+    | Cap: 11        |                       | 01001000 | . . .    | 01100010 |
+    +----------------+                       +----------+----------+----------+
+
+         s
+         |
+         V
+    +----------------+                       +----------+----------+----------+
+    | Data: 0xc..178 | --------------------> | 0xc..178 | 0xc....  | 0xc..184 |
+    | Len: 11        |                       +----------+----------+----------+
+    |                |                       | 01001000 | . . .    | 01100010 |
+    +----------------+                       +----------+----------+----------+
+
+```
+
+---
+
+# Casting `[]byte` to a `string`
+
+We change the first character of `[]byte` to whatever the byte value of `'z'` is, and `s` is untouched.
+
+
+```go
+    bb := []byte{72, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100}
+    s := string(bb)
+ >  bb[0] = 'z'
+ >  fmt.Println(s) // Output: Hello world
+```
+
+```
+         b
+         |
+         V
+    +----------------+                       +----------+----------+----------+
+    | Data: 0xc..158 | --------------------> | 0xc..158 | 0xc....  | 0xc..164 |
+    | Len: 11        |                       +----------+----------+----------+
+    | Cap: 11        |                       | 01111010 | . . .    | 01100010 |
+    +----------------+                       +----------+----------+----------+
+
+         s
+         |
+         V
+    +----------------+                       +----------+----------+----------+
+    | Data: 0xc..178 | --------------------> | 0xc..178 | 0xc....  | 0xc..184 |
+    | Len: 11        |                       +----------+----------+----------+
+    |                |                       | 01001000 | . . .    | 01100010 |
+    +----------------+                       +----------+----------+----------+
+
+```
+
+<!-- stop -->
+
+I'm sure you's can guess, this clone isn't cheap.
+
+---
+
+# Casting `[]byte` to a `string`
+
+## Benchmarking the safe approach
+
+<!-- stop -->
+
+```file
+path: src/examples/casting/cmd/byteslice_to_string/bench/bench_test.go
+lang: go
+transform: sed 's/\t/    /g'
+lines:
+    start: 10
+    end: 29
+```
+
+<!-- stop -->
+
+```terminal-ex
+command: zsh -il
+rows: 20
+init_text: (cd src/examples/casting/; go test -run=x -bench=SafeCast ./cmd/byteslice_to_string/bench/... -benchmem -benchtime=5s)
+init_wait: '> '
+init_codeblock_lang: zsh
+```
+
+---
+
+# Casting `[]byte` to a `string`
+
+## The unsafe way
 
 Truth be told there are three ways to do this.
 
@@ -1158,6 +1300,95 @@ transform: sed 's/\t/    /g'
 lines:
     start: 29
     end: null
+```
+
+---
+
+# Casting `[]byte` to a `string`
+
+## Benchmarking the unsafe approaches
+
+```file
+path: src/examples/casting/cmd/byteslice_to_string/bench/bench_test.go
+lang: go
+transform: sed 's/\t/    /g'
+lines:
+    start: 30
+    end: 47
+```
+
+<!-- stop -->
+
+```terminal-ex
+command: zsh -il
+rows: 20
+init_text: (cd src/examples/casting/; go test -run=x -bench=UnsafeCast ./cmd/byteslice_to_string/bench/... -benchmem -benchtime=5s)
+init_wait: '> '
+init_codeblock_lang: zsh
+```
+
+---
+
+# Casting `[]byte` to a `string`
+
+## Benchmarking the unsafe approaches
+
+```file
+path: src/examples/casting/cmd/byteslice_to_string/bench/bench_test.go
+lang: go
+transform: sed 's/\t/    /g'
+lines:
+    start: 48
+    end: 65
+```
+
+<!-- stop -->
+
+```terminal-ex
+command: zsh -il
+rows: 20
+init_text: (cd src/examples/casting/; go test -run=x -bench=UnsafeCast ./cmd/byteslice_to_string/bench/... -benchmem -benchtime=5s)
+init_wait: '> '
+init_codeblock_lang: zsh
+```
+
+---
+
+# Casting `[]byte` to a `string`
+
+## Benchmarking the unsafe approaches
+
+```file
+path: src/examples/casting/cmd/byteslice_to_string/bench/bench_test.go
+lang: go
+transform: sed 's/\t/    /g'
+lines:
+    start: 66
+    end: null
+```
+
+<!-- stop -->
+
+```terminal-ex
+command: zsh -il
+rows: 20
+init_text: (cd src/examples/casting/; go test -run=x -bench=UnsafeHeader ./cmd/byteslice_to_string/bench/... -benchmem -benchtime=5s)
+init_wait: '> '
+init_codeblock_lang: zsh
+```
+
+---
+
+# Casting `[]byte` to a `string`
+
+## All together now!
+
+```terminal-ex
+command: zsh -il
+rows: 40
+init_text: (cd src/examples/casting/; go test -run=x -bench=. ./cmd/byteslice_to_string/bench/... -benchmem -benchtime=2s)
+init_wait: '> '
+init_codeblock_lang: zsh
 ```
 
 ---
@@ -1248,7 +1479,7 @@ In memory, this looks like so:
 When you reference a slice, you actually get the memory address of this header.
 
 ```go
-    bb := []byte{72, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100, 33}
+    bb := []byte{72, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100}
     _ = bb // {Data: 0xcff0...ab, Len: 12, Cap: 16}
 ```
 
@@ -1365,8 +1596,6 @@ things to talk about
 
 byte -> string conversion being BLAZING fast
 string -> byte conversion being class but longer
-
-[]custom -> []string conversion
 
 compiler no escape hack
 

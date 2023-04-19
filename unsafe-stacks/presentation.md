@@ -1771,14 +1771,409 @@ This can lead to all sorts of chaos, from undefined behaviour to memory leaks to
 
 ---
 
+# Avoiding allocations
+
+One of the sad parts of go, for me, is balancing these three facts:
+
 <!-- stop -->
+
+1. Interfaces are awesome are allow for easy mocking.
+<!-- stop -->
+
+1. Allocating memory to the heap is very expensive.
+<!-- stop -->
+
+1. Passing a pointer to an interface always allocates.
+
+<!-- stop -->
+
+So, if we want to write easily mockable services, we may have to accept that we'll be poking the GC some more.
+
+---
+
+# Avoiding allcations
+
+## But WHY does it allocate?
+
+From the compiler's point of view it's very simple.
+
+Let's say you have an interface:
+
+```go
+type Relayer interface {
+    Relay(ctx context.Context, msg *Message) error
+}
+```
+
+<!-- stop -->
+
+Let's call this `Relay` function:
+
+```go
+func doRelay(ctx context.Context, relayer Relayer, msg *Message) error {
+    return relayer.Relay(ctx, msg)
+}
+```
+
+We have no idea what this `relayer` is doing with `msg`.
+
+<!-- stop -->
+
+It might save the message:
+
+```go
+func (s *hyperthymesiaRelay) Relay(ctx context.Context, msg *Message) error {
+    // some code
+
+    s.relayedMessages = append(s.relayedMessages, msg)
+
+    // some more code
+}
+```
+
+<!-- stop -->
+
+It might fire it down a channel to who knows where:
+
+```go
+func (s *bufferedRelay) Relay(ctx context.Context, msg *Message) error {
+    // some code
+
+    s.buf = <-msg
+
+    // some more code
+}
+```
+
+<!-- stop -->
+
+It might fire it off in a go routine.
+
+```go
+func (s *backgroundRelay) Relay(ctx context.Context, msg *Message) error {
+    // some code
+
+    go handle(msg)
+
+    // some more code
+}
+```
+
+<!-- stop -->
+
+The compiler cannot guarantee that the pointer won't live longer than, or remain inside, the scope of the interface's function.
+
+---
+
+# Avoiding allocations
+
+## Can anything be done?
+
+Against all odds, yes.
+
+<!-- stop -->
+
+Though you should probably never do this.
+
+---
+
+# Avoiding allocations
+
+## Can anything be done?
+
+Take the following __very__ contrived code.
+
+We have service that handles `Person` entities. This service calls to a repo, and this repo saves the `Person` entities in a `Store`.
+
+```file
+path: src/examples/heap/person.go
+lang: go
+transform: sed 's/\t/    /g'
+lines:
+    start: 14
+    end: 29
+```
+
+---
+
+# Avoiding allocations
+
+## Can anything be done?
+
+We implement the store to just store with a map in a non-threadsafe way, because demo.
+
+```file
+path: src/examples/heap/store/personstore.go
+lang: go
+transform: sed 's/\t/    /g'
+lines:
+    start: 11
+    end: null
+```
+
+---
+
+# Avoiding allocations
+
+## Can anything be done?
+
+We implement the repo and service as you would expect.
+
+```file
+path: src/examples/heap/repo/person.go
+lang: go
+transform: sed 's/\t/    /g'
+lines:
+    start: 13
+    end: 34
+```
+---
+
+# Avoiding allocations
+
+## Can anything be done?
+
+We implement the repo and service as you would expect.
+
+```file
+path: src/examples/heap/service/person.go
+lang: go
+transform: sed 's/\t/    /g'
+lines:
+    start: 13
+    end: 25
+```
+
+<!-- stop -->
+
+```terminal-ex
+command: zsh -il
+rows: 25
+init_text: (cd src/examples/heap/; go test -run=x -bench=Safe ./service/... -benchmem -benchtime=5s)
+init_wait: '> '
+init_codeblock_lang: zsh
+```
+
+---
+
+# Avoiding allocations
+
+## The unsafe way
+
+So I have the exact same repo and service interfaces implemented in an unsafe way.
+
+First we'll look at the benchmarks, then some background. Then we will look at the code.
+
+<!-- stop -->
+
+```terminal-ex
+command: zsh -il
+rows: 25
+init_text: (cd src/examples/heap/; go test -run=x -bench=Unsafe ./service/... -benchmem -benchtime=5s)
+init_wait: '> '
+init_codeblock_lang: zsh
+```
+
+---
+
+
+# Avoid allocations
+
+## That's neat! But how far from gods light must we stray for this?
+
+<!-- stop -->
+
+Very.
+
+<!-- stop -->
+
+For this we leverage two compilter directives. The first being `//go:noescape`
+
+---
+
+# Avoiding allocations
+
+## //go:noescape
+
+`go:noescape` must be placed before a function is declared, and it disables escape analysis on a functions parameters and return values. Meaning any pointers passed in won't leak to the heap.
+
+There is, however, a catch. Straight from the docs:
+
+```
+The //go:noescape directive must be followed by a function declaration without a body (meaning that the function has an implementation not written in Go).
+```
+
+Example:
+
+```go
+//go:noescape
+func hello(str *string) error
+
+//go:noescape
+func goodbye(str *string) error
+```
+
+---
+
+# Avoiding allocations
+
+## //go:linkname
+
+This directive is pretty cool, but like all cool things, it can only be used if you import `unsafe` because it completely ignores the type system.
+
+This lets us stub the body of one function out with another.
+
+<!-- stop -->
+
+Let's say we have this following func:
+
+```file
+path: src/examples/linkname/util/util.go
+lang: go
+transform: sed 's/\t/    /g'
+lines:
+    start: 5
+    end: null
+```
+
+<!-- stop -->
+
+With the following test:
+```file
+path: src/examples/linkname/util/util_test.go
+lang: go
+transform: sed 's/\t/    /g'
+lines:
+    start: 15
+    end: null
+```
+
+<!-- stop -->
+
+What if we got the compliler to overwrite the body of `rand.Int` with a custom func?
+```file
+path: src/examples/linkname/util/util_test.go
+lang: go
+transform: sed 's/\t/    /g'
+lines:
+    start: 11
+    end: 15
+```
+
+---
+
+# Avoiding allocations
+
+## WAT
+
+Another use, using `time.Sleep` as an example.
+
+Has anyone ever gotten curious and looked at the implementation of `time.Sleep` in the std lib?
+
+<!-- stop -->
+
+```go
+// Sleep pauses the current goroutine for at least the duration d.
+// A negative or zero duration causes Sleep to return immediately.
+func Sleep(d Duration)
+```
+
+Very underwhelming.
+
+<!-- stop -->
+
+BUT, if we do a bit more digging, we find something interesting inside the `runtime` package:
+
+```go
+// timeSleep puts the current goroutine to sleep for at least ns nanoseconds.
+//
+//go:linkname timeSleep time.Sleep
+func timeSleep(ns int64) {
+    if ns <= 0 {
+        return
+    }
+
+    gp := getg()
+    t := gp.timer
+    if t == nil {
+        t = new(timer)
+        gp.timer = t
+    }
+    t.f = goroutineReady
+    t.arg = gp
+    t.nextwhen = nanotime() + ns
+    if t.nextwhen < 0 { // check for overflow.
+        t.nextwhen = maxWhen
+    }
+    gopark(resetForSleep, unsafe.Pointer(t), waitReasonSleep, traceEvGoSleep, 1)
+}
+```
+
+`time.Sleep` has no body, and `go:linkname` let us stub a body in. See where this is going?
+
+---
+
+# Avoiding allocations
+
+## Bringing it all together.
+
+Even though `//go:noescape` forces us to create a bodyless function, it doesn't forbid the body of that function to be stubbed with `//go:linkname`.
+
+So, let's take a look at our unsafe implementations of the small person service again.
+
+<!-- stop -->
+
+```file
+path: src/examples/heap/service/person.go
+lang: go
+transform: sed 's/\t/    /g'
+lines:
+    start: 30
+    end: null
+```
+
+---
+
+# Avoiding allocations
+
+## Bringing it all together.
+
+And the repo layer.
+
+<!-- stop -->
+
+```file
+path: src/examples/heap/repo/person.go
+lang: go
+transform: sed 's/\t/    /g'
+lines:
+    start: 38
+    end: null
+```
+
+---
+
+# ....and that's us.
+
+Sources:
+- https://go101.org
+- https://github.com/golang/go
+
+Github:
+- https://github.com/tigh-latte
+
+Thanks!
+
+---
 
 IF YOU ADVANCE THIS DIES
 
 <!-- stop -->
 
-hello
+I AM WARNING YOU
 
-<!-- things to talk about compiler no escape hack -->
+<!-- stop -->
+
+hello
 
 this is a test

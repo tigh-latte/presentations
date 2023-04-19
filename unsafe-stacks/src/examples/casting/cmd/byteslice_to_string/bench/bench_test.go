@@ -33,15 +33,15 @@ func Benchmark_UnsafeCast(b *testing.B) {
 		b.Run(fmt.Sprintf("%d len", test), func(b *testing.B) {
 			bb := bytes.Repeat([]byte{'a'}, test)
 
-			var out string
+			var out *string
 
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				s := *(*string)(unsafe.Pointer(&bb))
+				s := (*string)(unsafe.Pointer(&bb))
 				out = s
 			}
 
-			global = out
+			global = *out
 		})
 	}
 }

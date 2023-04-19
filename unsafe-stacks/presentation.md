@@ -769,8 +769,8 @@ path: src/examples/casting/cmd/customslice_to_slice/bench/bench_test.go
 lang: go
 transform: sed 's/\t/    /g'
 lines:
-    start: 6
-    end: 55
+    start: 8
+    end: 36
 ```
 
 ---
@@ -820,7 +820,7 @@ path: src/examples/casting/cmd/customslice_to_slice/bench/bench_test.go
 lang: go
 transform: sed 's/\t/    /g'
 lines:
-    start: 56
+    start: 37
     end: null
 ```
 
@@ -1074,7 +1074,7 @@ A slice header is like a `StringHeader`, only they are 24 bytes long. The extra 
 
 ## Slice headers
 
-And likewise, a struct representation of a sliced header exists in `reflect`:
+And likewise, a struct representation of a slice header exists in `reflect`:
 
 ```go
 type SliceHeader struct {
@@ -1234,7 +1234,7 @@ We change the first character of `[]byte` to whatever the byte value of `'z'` is
 
 <!-- stop -->
 
-I'm sure you's can guess, this clone isn't cheap.
+I'm sure yous can guess, this clone isn't cheap.
 
 ---
 
@@ -1347,7 +1347,7 @@ lines:
 ```terminal-ex
 command: zsh -il
 rows: 20
-init_text: (cd src/examples/casting/; go test -run=x -bench=UnsafeCast ./cmd/byteslice_to_string/bench/... -benchmem -benchtime=5s)
+init_text: (cd src/examples/casting/; go test -run=x -bench=UnsafeString ./cmd/byteslice_to_string/bench/... -benchmem -benchtime=5s)
 init_wait: '> '
 init_codeblock_lang: zsh
 ```
@@ -1393,129 +1393,9 @@ init_codeblock_lang: zsh
 
 ---
 
-# Method 3
+# Casting `[]byte` to a `string`
 
-```file
-path: src/examples/casting/cmd/byteslice_to_string/main.go
-lang: go
-transform: sed 's/\t/    /g'
-lines:
-    start: 29
-    end: null
-```
-
----
-
-# Method 3
-
-```go
-type StringHeader struct {
-    Data uintptr
-    Len  int
-}
-```
-
-<!-- stop -->
-
-In memory, this looks like so:
-
-### Data
-
-| 0xc..01 | 0xc..02 | 0xc..03 | 0xc..04 | 0xc..05 | 0xc..06 | 0xc..07 | 0xc..08 |
-|---------|---------|---------|---------|---------|---------|---------|---------|
-| 80      | 1       | 2       | 0       | 192     | 0       | 0       | 0       |
-
-### Len
-
-| 0xc..09 | 0xc..0a | 0xc..0b | 0xc..0c | 0xc..0d | 0xc..0e | 0xc..0f | 0xc..10 |
-|---------|---------|---------|---------|---------|---------|---------|---------|
-| 12      | 0       | 0       | 0       | 0       | 0       | 0       | 0       |
-
-<!-- stop -->
-
-When you get the memory address of a string, you actually get the memory address of this header.
-
-```go
-    s := "Hello world!"
-    _ = &s // {Data: 0xc456...01, Len: 12}
-```
-
----
-
-# Method 3
-
-```go
-type SliceHeader struct {
-    Data uintptr
-    Len  int
-    Cap  int
-}
-```
-
-<!-- stop -->
-
-In memory, this looks like so:
-
-### Data
-
-| 0xc..01 | 0xc..02 | 0xc..03 | 0xc..04 | 0xc..05 | 0xc..06 | 0xc..07 | 0xc..08 |
-|---------|---------|---------|---------|---------|---------|---------|---------|
-| 80      | 1       | 2       | 0       | 192     | 0       | 0       | 0       |
-
-### Len
-
-| 0xc..09 | 0xc..0a | 0xc..0b | 0xc..0c | 0xc..0d | 0xc..0e | 0xc..0f | 0xc..10 |
-|---------|---------|---------|---------|---------|---------|---------|---------|
-| 12      | 0       | 0       | 0       | 0       | 0       | 0       | 0       |
-
-### Cap
-
-| 0xc..11 | 0xc..12 | 0xc..13 | 0xc..14 | 0xc..15 | 0xc..16 | 0xc..17 | 0xc..18 |
-|---------|---------|---------|---------|---------|---------|---------|---------|
-| 16      | 0       | 0       | 0       | 0       | 0       | 0       | 0       |
-
-<!-- stop -->
-
-When you reference a slice, you actually get the memory address of this header.
-
-```go
-    bb := []byte{72, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100}
-    _ = bb // {Data: 0xcff0...ab, Len: 12, Cap: 16}
-```
-
----
-
-# Method 3
-
-```file
-path: src/examples/casting/cmd/byteslice_to_string/main.go
-lang: go
-transform: sed 's/\t/    /g'
-lines:
-    start: 29
-    end: null
-```
-
-<!-- stop -->
-
----
-
-# Method 2
-
-```file
-path: src/examples/casting/cmd/byteslice_to_string/main.go
-lang: go
-transform: sed 's/\t/    /g'
-lines:
-    start: 23
-    end: 28
-```
-
-
-
----
-
-# Method #1
+## The direct cast
 
 ```file
 path: src/examples/casting/cmd/byteslice_to_string/main.go
@@ -1526,62 +1406,370 @@ lines:
     end: 22
 ```
 
-`&bb` doesn't pull back the memory address holding `{72, 101, ...}`, but instead points to the __slice header__. A slice header spans 24 memory addresses, holding three pieces of information, each 8 addresses long.
+Here, similar to casting over a custom list, we create a var `s` and tell it to read `bb`'s data, but as a `string`. There is however, one interesting quirk.
 
 <!-- stop -->
 
-### Addrs 0-7
-
-The "data pointer"; the memory address of the underlying array.
-
-| 0xc..01 | 0xc..02 | 0xc..03 | 0xc..04 | 0xc..05 | 0xc..06 | 0xc..07 | 0xc..08 |
-|---------|---------|---------|---------|---------|---------|---------|---------|
-| 80      | 1       | 2       | 0       | 192     | 0       | 0       | 0       |
+We are casting a slice to `string`, thus casting a `SliceHeader` (24 bytes) to a `StringHeader` (16 bytes). This results in the final 8 bytes of the `SliceHeader` (the capacity) being ignored by our new string.
 
 <!-- stop -->
 
-### Addrs 8-15
-
-The length of the underlying array.
-
-| 0xc..09 | 0xc..0a | 0xc..0b | 0xc..0c | 0xc..0d | 0xc..0e | 0xc..0f | 0xc..10 |
-|---------|---------|---------|---------|---------|---------|---------|---------|
-| 12      | 0       | 0       | 0       | 0       | 0       | 0       | 0       |
+```go
+                +---------------------------------------------------------------------------------------+
+ bb starts -->  | 0xc..158 | 0xc..159 | 0xc..15a | 0xc..15b | 0xc..15c | 0xc..15d | 0xc..15e | 0xc..15f |
+                +----------+----------+----------+----------+----------+----------+----------+----------+
+ s starts --->  | 00000000 | 10000000 | 00001011 | 00000000 | 11000000 | 0        | 0        | 0        |
+                +----------+----------+----------+----------+----------+----------+----------+----------+
+                +---------------------------------------------------------------------------------------+
+                | 0xc..160 | 0xd..161 | 0xc..162 | 0xc..163 | 0xc..164 | 0xc..165 | 0xc..166 | 0xc..167 | <- s ends
+                +----------+----------+----------+----------+----------+----------+----------+----------+
+                | 00001011 | 0        | 0        | 0        | 0        | 0        | 0        | 0        |
+                +----------+----------+----------+----------+----------+----------+----------+----------+
+                +---------------------------------------------------------------------------------------+
+                | 0xc..168 | 0xd..169 | 0xc..16a | 0xc..16b | 0xc..16c | 0xc..16d | 0xc..16e | 0xc..16d | <- bb ends
+                +----------+----------+----------+----------+----------+----------+----------+----------+
+                | 00001011 | 0        | 0        | 0        | 0        | 0        | 0        | 0        |
+                +----------+----------+----------+----------+----------+----------+----------+----------+
+```
 
 <!-- stop -->
 
-### Addrs 16-23
-
-The capacity of the underlying array.
-
-| 0xc..09 | 0xc..0a | 0xc..0b | 0xc..0c | 0xc..0d | 0xc..0e | 0xc..0f | 0xc..10 |
-|---------|---------|---------|---------|---------|---------|---------|---------|
-| 12      | 0       | 0       | 0       | 0       | 0       | 0       | 0       |
-
-<!-- stop -->
-
-A string header is only 16 addresses long, needing a data pointer and a length.
-
+This is mostly fine.
 
 ---
 
-`bb` points to the starting memory address of the slice of bytes, and because this is a slice, golang will read the next 23 memory addresses as well. These 24 bytes build the slice header.
+# Casting `[]byte` to a `string`
+
+## Using unsafe package helpers
+
+```file
+path: src/examples/casting/cmd/byteslice_to_string/main.go
+lang: go
+transform: sed 's/\t/    /g'
+lines:
+    start: 23
+    end: 28
+```
+
+This approach, under the hood, is similar to casting a `string` to a custom type (such as `MyCoolType`).
 
 <!-- stop -->
 
-The first 8 bytes build a memory, pointing to the slice's underlying array.
+`unsafe.SliceData` takes a slice and returns a pointer to the starting element of that slice (calculated from `&bb[:1][0]`), so here it will return a pointer to where `72` is in memory. Its functionality similar to `&bb[0]` but with a couple of safety checks around `nil`.
 
-| 0x00 | 0x01 | 0x02 | 0x03 | 0x04 | 0x05 | 0x06 | 0x07 |
-|------|------|------|------|------|------|------|------|
-| 80   | 1    | 2    | 0    | 192  | 0    | 0    | 0    |
+<!-- stop -->
 
+`unsafe.String` takes a pointer and a length, and then builds and returns a new `StringHeader`, with the provided pointer being used for `StringHeader.Data`, and the length as `StringHeader.Len`.
+
+<!-- stop -->
+
+This results in a `string` being created which points at the same underlying data as `bb`.
+
+```go
+          +----------------+                       +----------+----------+----------+
+  bb -->  | Data: 0xc..158 | ----------+---------> | 0xc..158 | 0xc....  | 0xc..162 |
+          | Len: 11        |           |           +----------+----------+----------+
+          +----------------+           |           | 'H'      | . . .    | 'd'      |
+                                       |           +----------+----------+----------+
+                                       |
+          +----------------+           |
+  s --->  | Data: 0xc..158 | ----------+
+          | Len: 11        |
+          +----------------+
+```
 
 ---
 
-# Working around this
+# Casting `[]byte` to a `string`
 
-If we don't care about this integrity (because, say, our slice of bytes is about to go out of scope), we can use `unsafe.String` to force a cast.
+## Manually creating the header
 
+Let's go through this line by line.
+
+```file
+path: src/examples/casting/cmd/byteslice_to_string/main.go
+lang: go
+transform: sed 's/\t/    /g'
+lines:
+    start: 29
+    end: null
+```
+
+---
+
+# Casting `[]byte` to a `string`
+
+## Manually creating the header
+
+First we create our slice of bytes.
+
+```file
+path: src/examples/casting/cmd/byteslice_to_string/main.go
+lang: go
+transform: sed 's/\t/    /g;31s/    / >  /'
+lines:
+    start: 29
+    end: null
+```
+
+```go
+          +----------------+                       +----------+----------+----------+
+  bb -->  | Data: 0xc..158 | --------------------> | 0xc..158 | 0xc....  | 0xc..162 |
+          | Len: 11        |                       +----------+----------+----------+
+          +----------------+                       | 'H'      | . . .    | 'd'      |
+                                                   +----------+----------+----------+
+```
+
+---
+
+# Casting `[]byte` to a `string`
+
+## Manually creating the header
+
+Next we create an empty string. This creates a zeroed `StringHeader`, pointing to `0` with a `Len` of `0`.
+
+```file
+path: src/examples/casting/cmd/byteslice_to_string/main.go
+lang: go
+transform: sed 's/\t/    /g;33s/    / >  /'
+lines:
+    start: 29
+    end: null
+```
+
+```go
+          +----------------+                       +----------+----------+----------+
+  bb -->  | Data: 0xc..158 | --------------------> | 0xc..158 | 0xc....  | 0xc..162 |
+          | Len: 11        |                       +----------+----------+----------+
+          +----------------+                       | 'H'      | . . .    | 'd'      |
+                                                   +----------+----------+----------+
+
+          +----------------+
+  s --->  | Data: 0        |
+          | Len: 0         |
+          +----------------+
+```
+
+---
+
+# Casting `[]byte` to a `string`
+
+## Manually creating the header
+
+We cast `s` and `bb` to string and slice headers, so their binary data is accessable.
+
+```file
+path: src/examples/casting/cmd/byteslice_to_string/main.go
+lang: go
+transform: sed 's/\t/    /g;34,35s/    / >  /'
+lines:
+    start: 29
+    end: null
+```
+
+```go
+          +----------------+                       +----------+----------+----------+
+  bb -->  | Data: 0xc..158 | --------------------> | 0xc..158 | 0xc....  | 0xc..162 |
+          | Len: 11        |                       +----------+----------+----------+
+          +----------------+                       | 'H'      | . . .    | 'd'      |
+                                                   +----------+----------+----------+
+
+          +----------------+
+  s --->  | Data: 0        |
+          | Len: 0         |
+          +----------------+
+```
+
+---
+
+# Casting `[]byte` to a `string`
+
+## Manually creating the header
+
+We assign `bb`'s `SliceHeader.Data` to `s`'s `SliceHeader.Data`.
+
+```file
+path: src/examples/casting/cmd/byteslice_to_string/main.go
+lang: go
+transform: sed 's/\t/    /g;37s/    / >  /'
+lines:
+    start: 29
+    end: null
+```
+
+```go
+          +----------------+                       +----------+----------+----------+
+  bb -->  | Data: 0xc..158 | ---------+----------> | 0xc..158 | 0xc....  | 0xc..162 |
+          | Len: 11        |          |            +----------+----------+----------+
+          +----------------+          |            | 'H'      | . . .    | 'd'      |
+                                      |            +----------+----------+----------+
+                                      |
+          +----------------+          |
+  s --->  | Data: 0xc..158 |----------+
+          | Len: 0         |
+          +----------------+
+```
+
+---
+
+# Casting `[]byte` to a `string`
+
+## Manually creating the header
+
+We assign `bb`'s `SliceHeader.Len` to `s`'s `SliceHeader.Len`.
+
+```file
+path: src/examples/casting/cmd/byteslice_to_string/main.go
+lang: go
+transform: sed 's/\t/    /g;38s/    / >  /'
+lines:
+    start: 29
+    end: null
+```
+
+```go
+          +----------------+                       +----------+----------+----------+
+  bb -->  | Data: 0xc..158 | ---------+----------> | 0xc..158 | 0xc....  | 0xc..162 |
+          | Len: 11        |          |            +----------+----------+----------+
+          +----------------+          |            | 'H'      | . . .    | 'd'      |
+                                      |            +----------+----------+----------+
+                                      |
+          +----------------+          |
+  s --->  | Data: 0xc..158 |----------+
+          | Len: 11        |
+          +----------------+
+```
+
+---
+
+# Casting `[]byte` to a `string`
+
+## So which should I use?
+
+The safest of all of these is the third method, casting to the header, just because we have the most control over the casting.
+
+However we should probably take inspirition from the std lib here.
+
+<!-- stop -->
+
+Here is the code for `strings.Clone` as of `go version go1.20.3 linux/amd64`:
+
+```go
+func Clone(s string) string {
+    if len(s) == 0 {
+        return ""
+    }
+    b := make([]byte, len(s))
+    copy(b, s)
+    return unsafe.String(&b[0], len(b))
+}
+```
+
+<!-- stop -->
+
+## Moral of the story
+
+We're already far off the beaten track so who cares?
+
+---
+
+# Casting a `string` to `[]byte`
+
+This is largely similar to casting a `[]byte` to a `string`, but there is one massive difference. One of the methods is invalid and, while creating code that will execute, is __very__ dangerous.
+
+<!-- stop -->
+
+
+```file
+path: src/examples/casting/cmd/string_to_byteslice/main.go
+lang: go
+transform: sed 's/\t/    /g'
+lines:
+    start: 16
+    end: 22
+```
+
+
+```file
+path: src/examples/casting/cmd/string_to_byteslice/main.go
+lang: go
+transform: sed 's/\t/    /g'
+lines:
+    start: 23
+    end: 28
+```
+
+
+```file
+path: src/examples/casting/cmd/string_to_byteslice/main.go
+lang: go
+transform: sed 's/\t/    /g'
+lines:
+    start: 29
+    end: null
+```
+
+---
+
+# Casting a `string` to `[]byte`
+
+## And the winner is...
+
+<!-- stop -->
+
+```file
+path: src/examples/casting/cmd/string_to_byteslice/main.go
+lang: go
+transform: sed 's/\t/    /g'
+lines:
+    start: 16
+    end: 22
+```
+
+<!-- stop -->
+
+Why? Those pesky headers again.
+
+---
+
+# Casting a `string` to `[]byte`
+
+## Casting a `StringHeader` to a `SliceHeader`.
+
+Once agian, a `StringHeader` is 16 bytes, and a `SliceHeader` is 24 bytes.
+
+<!-- stop -->
+
+So, if we are to cast a `StringHeader` to a `SliceHeader`, our read will overshoot by 8 bytes, and will read random data into the slice's capacity.
+
+<!-- stop -->
+
+
+```go
+                +---------------------------------------------------------------------------------------+
+  s starts -->  | 0xc..158 | 0xc..159 | 0xc..15a | 0xc..15b | 0xc..15c | 0xc..15d | 0xc..15e | 0xc..15f |
+                +----------+----------+----------+----------+----------+----------+----------+----------+
+ bb starts -->  | 00000000 | 10000000 | 00001011 | 00000000 | 11000000 | 0        | 0        | 0        |
+                +----------+----------+----------+----------+----------+----------+----------+----------+
+                +---------------------------------------------------------------------------------------+
+                | 0xc..160 | 0xd..161 | 0xc..162 | 0xc..163 | 0xc..164 | 0xc..165 | 0xc..166 | 0xc..167 | <- s ends
+                +----------+----------+----------+----------+----------+----------+----------+----------+
+                | 00001011 | 0        | 0        | 0        | 0        | 0        | 0        | 0        |
+                +----------+----------+----------+----------+----------+----------+----------+----------+
+                +---------------------------------------------------------------------------------------+
+                | 0xc..168 | 0xd..169 | 0xc..16a | 0xc..16b | 0xc..16c | 0xc..16d | 0xc..16e | 0xc..16d | <- bb ends
+                +----------+----------+----------+----------+----------+----------+----------+----------+
+                |   ????   |   ????   |   ????   |   ????   |   ????   |   ????   |   ????   |   ????   |
+                +----------+----------+----------+----------+----------+----------+----------+----------+
+```
+
+This can lead to all sorts of chaos, from undefined behaviour to memory leaks to data corruption.
+
+---
+
+# Any questions so far?
+
+---
 
 <!-- stop -->
 
@@ -1591,14 +1779,6 @@ IF YOU ADVANCE THIS DIES
 
 hello
 
-<!--
-things to talk about
-
-byte -> string conversion being BLAZING fast
-string -> byte conversion being class but longer
-
-compiler no escape hack
-
--->
+<!-- things to talk about compiler no escape hack -->
 
 this is a test

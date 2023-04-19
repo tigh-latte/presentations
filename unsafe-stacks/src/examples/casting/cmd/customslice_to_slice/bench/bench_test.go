@@ -1,6 +1,7 @@
 package bench
 
 import (
+	"fmt"
 	"testing"
 	"unsafe"
 )
@@ -10,29 +11,9 @@ var global []string
 func Benchmark_SafeSliceCast(b *testing.B) {
 	type testType string
 
-	tests := []struct {
-		name  string
-		total int
-	}{{
-		name:  "10 elems",
-		total: 10,
-	}, {
-		name:  "100 elems",
-		total: 100,
-	}, {
-		name:  "1000 elems",
-		total: 1000,
-	}, {
-		name:  "10000 elems",
-		total: 10000,
-	}, {
-		name:  "100000 elems",
-		total: 100000,
-	}}
-
-	for _, test := range tests {
-		b.Run(test.name, func(b *testing.B) {
-			ww := make([]testType, test.total)
+	for _, test := range []int{10, 100, 1000, 10000, 100000} {
+		b.Run(fmt.Sprintf("%d elems", test), func(b *testing.B) {
+			ww := make([]testType, test)
 			for i := range ww {
 				ww[i] = testType("hello")
 			}
@@ -57,29 +38,9 @@ func Benchmark_SafeSliceCast(b *testing.B) {
 func Benchmark_UnsafeSliceCast(b *testing.B) {
 	type testType string
 
-	tests := []struct {
-		name  string
-		total int
-	}{{
-		name:  "10 elems",
-		total: 10,
-	}, {
-		name:  "100 elems",
-		total: 100,
-	}, {
-		name:  "1000 elems",
-		total: 1000,
-	}, {
-		name:  "10000 elems",
-		total: 10000,
-	}, {
-		name:  "100000 elems",
-		total: 100000,
-	}}
-
-	for _, test := range tests {
-		b.Run(test.name, func(b *testing.B) {
-			ww := make([]testType, test.total)
+	for _, test := range []int{10, 100, 1000, 10000, 100000} {
+		b.Run(fmt.Sprintf("%d elems", test), func(b *testing.B) {
+			ww := make([]testType, test)
 			for i := range ww {
 				ww[i] = testType("hello")
 			}

@@ -1043,7 +1043,11 @@ If we clone `myString` via `strings.Clone`, the underlying character data would 
     +----------------+                       +----------+----------+----------+
 ```
 
-<!-- stop -->
+---
+
+# Casting slices
+
+## String headers
 
 However, if we cast this `myString` to a custom type the underlying data isn't cloned. Instead a new `StringHeader` is created pointing to the same character array in memory:
 
@@ -1889,7 +1893,11 @@ func doRelay(ctx context.Context, relayer Relayer, msg *Message) error {
 
 We have no idea what this `relayer` is doing with `msg`.
 
-<!-- stop -->
+---
+
+# Avoiding allcations
+
+## But WHY does it allocate?
 
 It might save the message:
 
@@ -1903,7 +1911,11 @@ func (s *hyperthymesiaRelay) Relay(ctx context.Context, msg *Message) error {
 }
 ```
 
-<!-- stop -->
+---
+
+# Avoiding allcations
+
+## But WHY does it allocate?
 
 It might fire it down a channel to who knows where:
 
@@ -1917,7 +1929,11 @@ func (s *bufferedRelay) Relay(ctx context.Context, msg *Message) error {
 }
 ```
 
-<!-- stop -->
+---
+
+# Avoiding allcations
+
+## But WHY does it allocate?
 
 It might fire it off in a go routine.
 
@@ -1972,7 +1988,7 @@ lines:
 
 ## Can anything be done?
 
-We implement the store to just store with a map in a non-threadsafe way, because demo.
+The implementation of the store uses a map in a non-threadsafe way, because demo.
 
 ```file
 path: src/examples/heap/store/personstore.go
@@ -2059,7 +2075,7 @@ Very.
 
 <!-- stop -->
 
-For this we leverage two compilter directives. The first being `//go:noescape`
+For this we leverage two compiler directives. The first being `//go:noescape`
 
 ---
 
@@ -2067,7 +2083,7 @@ For this we leverage two compilter directives. The first being `//go:noescape`
 
 ## //go:noescape
 
-`go:noescape` must be placed before a function is declared, and it disables escape analysis on a functions parameters and return values. Meaning any pointers passed in won't leak to the heap.
+`go:noescape` must be placed before a function is declared, and it disables escape analysis on a function's parameters and return values. Meaning any pointers passed in won't leak to the heap.
 
 There is, however, a catch. Straight from the docs:
 
@@ -2236,16 +2252,3 @@ Github:
 
 Thanks!
 
----
-
-IF YOU ADVANCE THIS DIES
-
-<!-- stop -->
-
-I AM WARNING YOU
-
-<!-- stop -->
-
-hello
-
-this is a test

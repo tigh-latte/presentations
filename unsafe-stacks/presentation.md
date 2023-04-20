@@ -35,18 +35,42 @@ How using `unsafe` can reduce allocations (with hilarious consequences!)
 
 # What is `unsafe`?
 
-Unsafe allows us to bypass certain golang memory and type safety operations by giving us a (limited) number of APIs to interface directly with the host machine's memory.
+A pointer in golang has an associated type and points to some address in memory.
+
+Using unsafe, we can point some address in memory, but without an associated type. We can then cast a type to this pointer.
 
 <!-- stop -->
+
+## Quick warning.
+
+You don't need to know any of what I'm about to tell your in order to write good go.
+
+---
+
+# What is `unsafe`?
+
+As of go1.20, `unsafe` exposes the following:
 
 ```go
 
 func Offsetof(x ArbitraryType) uintptr
 func Alignof(x ArbitraryType) uintptr
 func Sizeof(x ArbitraryType) uintptr
+
+func String(ptr *byte, len IntegerType) string
+func StringData(str string) *byte
+func Slice(ptr *ArbitraryType, len IntegerType) []ArbitraryType
+func SliceData(slice []ArbitraryType) *ArbitraryType
+
+type Pointer *ArbitraryType
+func Add(ptr Pointer, len IntegerType) Pointer
 ```
 
+Let's address the first three.
+
 ---
+
+# What is `unsafe`?
 
 ## `func Offsetof(x ArbitraryType) uintptr`
 
@@ -61,6 +85,8 @@ lines:
 
 ---
 
+# What is `unsafe`?
+
 ## `func Offsetof(x ArbitraryType) uintptr`
 
 ```file
@@ -73,6 +99,8 @@ lines:
 ```
 
 ---
+
+# What is `unsafe`?
 
 ## `func Sizeof(x ArbitraryType) uintptr`
 
@@ -87,6 +115,8 @@ lines:
 
 ---
 
+# What is `unsafe`?
+
 ## `func Sizeof(x ArbitraryType) uintptr`
 
 ```file
@@ -99,6 +129,8 @@ lines:
 ```
 
 ---
+
+# What is `unsafe`?
 
 ## `func Alignof(x ArbitraryType) uintptr`
 
@@ -122,7 +154,7 @@ The real lunacy begins when you use `unsafe.Pointer`.
 
 # What is `unsafe.Pointer`?
 
-The standard library defines this as:
+As seen before, the standard library defines this as:
 
 ```go
 type Pointer *ArbitraryType
@@ -152,7 +184,7 @@ If we have an `*int` that points to `0xc000020158`, golang isn't __just__ concer
 
 
 ```
- &i points to                                                                golang reads to
+ &i points to                                                             golang reads until
      |                                                                            |
      v                                                                            v
 +---------------------------------------------------------------------------------------+
@@ -192,12 +224,14 @@ If we have a `*string` that points to `0xc000020158`, golang isn't __just__ conc
 +----------+----------+----------+----------+----------+----------+----------+----------+
                                                                                    ^
                                                                                    |
-                                                                            golang reads to
+                                                                           golang reads until
 ```
 
 ---
 
 # What is `unsafe.Pointer`?
+
+## Typed pointers
 
 So if we convert a typed pointer to an `unsafe.Pointer`, we are pretty much just pointing to that single memory address.
 
@@ -206,8 +240,21 @@ So if we convert a typed pointer to an `unsafe.Pointer`, we are pretty much just
     p := unsafe.Pointer(&i) // Mem addr: 0xc000020158
 ```
 
+---
+
+# What is `unsafe.Pointer`?
+
+## Typed pointers
+
+So if we convert a typed pointer to an `unsafe.Pointer`, we are pretty much just pointing to that single memory address.
+
+```go
+ >  i := 34562
+    p := unsafe.Pointer(&i) // Mem addr: 0xc000020158
 ```
- &i points to                                                                &i is read to
+
+```
+ &i points to                                                               i is read until
      |                                                                            |
      v                                                                            v
 +---------------------------------------------------------------------------------------+
@@ -221,11 +268,13 @@ So if we convert a typed pointer to an `unsafe.Pointer`, we are pretty much just
 
 # What is `unsafe.Pointer`?
 
+## Typed pointers
+
 So if we convert a typed pointer to an `unsafe.Pointer`, we are pretty much just pointing to that single memory address.
 
 ```go
     i := 34562
-    p := unsafe.Pointer(&i) // Mem addr: 0xc000020158
+ >  p := unsafe.Pointer(&i) // Mem addr: 0xc000020158
 ```
 
 ```
@@ -247,7 +296,8 @@ This will remain the case until we read the `unsafe.Pointer` as a type, and here
 
 # What is `unsafe.Pointer`?
 
-With this `unsafe.Pointer` we can have the binary data stored at `*i` be read
+With this `unsafe.Pointer` we can have the binary data stored at `*i` be read as another type.
+
 To dereference an `unsafe.Pointer`, we first cast it to a type, and then the data is read as it would be for this cast type.
 
 <!-- stop -->
@@ -260,8 +310,8 @@ Continuing on from the previous example, using `unsafe.Pointer` as a medium, we 
 ```
 
 ```
- &i points to                                                                &i is read to
- &s points to                                                                     |
+ &i points to                                                               i is read until
+ &str points to                                                                   |
      |                                                                            |
      v                                                                            v
 +---------------------------------------------------------------------------------------+
@@ -276,7 +326,7 @@ Continuing on from the previous example, using `unsafe.Pointer` as a medium, we 
 +----------+----------+----------+----------+----------+----------+----------+----------+
                                                                                   ^
                                                                                   |
-                                                                            &s is read to
+                                                                           str is read until
 ```
 
 ---
@@ -350,7 +400,7 @@ We dereference this cast:
 
 Simple answer, we wouldn't. Don't ever do this.
 
-The uses of this for performance come from other data structures, which we will get into later.
+The uses of cross-type casting to improve performance applies to other data structures, which we will get into later.
 
 However though, it can be interesting to mess around with `unsafe.Pointer` hacks to see how golang reads data.
 
@@ -371,10 +421,10 @@ lines:
 <!-- stop -->
 
 ```
- i points to                                                                   i reads to
+ i points to                                                                 i reads until
  b points to
- f points to                                                                   f reads to
- a points to                                                                   a reads to
+ f points to                                                                 f reads until
+ a points to                                                                 a reads until
      |                                                                             |
      V                                                                             V
 +---------------------------------------------------------------------------------------+
@@ -384,7 +434,7 @@ lines:
 +----------+----------+----------+----------+----------+----------+----------+----------+
      ^
      |
- b reads to
+ b reads until
 ```
 
 
@@ -404,10 +454,10 @@ lines:
 <!-- stop -->
 
 ```
- i points to                                                                   i reads to
+ i points to                                                                 i reads until
  b points to
- f points to                                                                   f reads to
- a points to                                                                   a reads to
+ f points to                                                                 f reads until
+ a points to                                                                 a reads until
      |                                                                             |
      V                                                                             V
 +---------------------------------------------------------------------------------------+
@@ -417,7 +467,7 @@ lines:
 +----------+----------+----------+----------+----------+----------+----------+----------+
      ^
      |
- b reads to
+ b reads until
 ```
 
 ---
@@ -436,10 +486,10 @@ lines:
 <!-- stop -->
 
 ```
- i points to                                                                   i reads to
+ i points to                                                                 i reads until
  b points to
- f points to                                                                   f reads to
- a points to                                                                   a reads to
+ f points to                                                                 f reads until
+ a points to                                                                 a reads until
      |                                                                             |
      V                                                                             V
 +---------------------------------------------------------------------------------------+
@@ -449,7 +499,7 @@ lines:
 +----------+----------+----------+----------+----------+----------+----------+----------+
      ^
      |
- b reads to
+ b reads until
 ```
 
 ---
@@ -468,10 +518,10 @@ lines:
 <!-- stop -->
 
 ```
- i points to                                                                   i reads to
+ i points to                                                                 i reads until
  b points to
- f points to                                                                   f reads to
- a points to                                                                   a reads to
+ f points to                                                                 f reads until
+ a points to                                                                 a reads until
      |                                                                             |
      V                                                                             V
 +---------------------------------------------------------------------------------------+
@@ -488,7 +538,9 @@ lines:
 
 # Then we have `uintptr`
 
-This is an integer representation of an unsafe pointer, letting us do pointer arithmetic.
+This is an integer representation of a memory address.
+
+An `unsafe.Pointer` can be cast to a `uintptr`, letting us do pointer arithmetic.
 
 ```go
     i := new(int)  // 0xc000020158
@@ -502,7 +554,9 @@ This is an integer representation of an unsafe pointer, letting us do pointer ar
 
 # Then we have `uintptr`
 
-Let's explain this real quick.
+Let's explain that real quick.
+
+<!-- stop -->
 
 ```go
  >  i := new(int)  // 0xc000020158
@@ -691,7 +745,9 @@ Say we have the following type:
 type MyCoolType string
 ```
 
-We want to pass a slice of this type, `[]MyCoolType`, to `strings.Join`. What can we do?
+We want to pass a slice of this type, `[]MyCoolType`, to `strings.Join`. `strings.Join` takes a `[]string`.
+
+What can we do?
 
 ```go
 type MyCoolType string
@@ -732,6 +788,22 @@ func MyCoolJoiner(mm []MyCoolType, div string) MyCoolType {
 ```
 ```
 err: cannot convert mm (variable of type []MyCoolType) to type []string
+```
+
+<!-- stop -->
+
+We can't even use generics to fool the type system:
+
+```go
+type MyCoolType string
+
+func MyCoolJoiner[T ~string](tt []T, div string) T {
+    return T(strings.Join(tt, div))
+}
+```
+
+```
+err: cannot use tt (variable of type []T) as []string value in argument to strings.Join
 ```
 
 ---

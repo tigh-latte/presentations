@@ -1,10 +1,16 @@
-# Using your editor to fix Go
+---
 
-<!-- pause -->
+title: Using your editor to fix Go
+sub_title: Go has problems??
+author: Tighearnán Carroll
+options:
+  end_slide_shorthand: true
+theme:
+  mermaid:
+    background: transparent
+    theme: dark
 
-Author: Tighearnán Carroll
-
-<!-- end_slide -->
+---
 
 ## What this talk is
 
@@ -18,7 +24,7 @@ Your editor is great, but not without features that you've never used.
 
 Can we maybe use these features to paper over go's problems?
 
-<!-- end_slide -->
+---
 
 ## What this talk is
 
@@ -26,7 +32,7 @@ We will be using using Neovim and it's API, so there be more Lua than Golang.
 
 However, nothing here is Neovim exclusive. If you run VSCode, any Intellij IDE, or any other editor with good plugin support, all of this will be possible.
 
-<!-- end_slide -->
+---
 
 ## What this talk isn't
 
@@ -34,7 +40,7 @@ However, nothing here is Neovim exclusive. If you run VSCode, any Intellij IDE, 
 
 ![](./static/iusevim.png)
 
-<!-- end_slide -->
+---
 
 ## Problems with Go
 
@@ -46,7 +52,7 @@ Golang, while good fun, has both features and issues that you need to warm to.
 
 To pick one of these features (_**totally**_ at random), we'll look at implicit interface satisfaction.
 
-<!-- end_slide -->
+---
 
 ## Problems with Go
 
@@ -102,7 +108,7 @@ func (RandomAnimal) Talk() {
 
 <!-- reset_layout -->
 
-<!-- end_slide -->
+---
 
 ## Problems with Go
 
@@ -119,7 +125,7 @@ func main() {
 }
 ```
 
-<!-- end_slide -->
+---
 
 ## Problems with Go
 
@@ -151,7 +157,7 @@ func (RandomAnimal) Talk() {
 
 - There is a belief that intention should be explicit.
 
-<!-- end_slide -->
+---
 
 # Moving swiftly on...
 
@@ -174,7 +180,7 @@ These APIs are fantastic building blocks.
 
 Let's take a _random_ API, displaying virtual text.
 
-<!-- end_slide -->
+---
 
 ### Editor API
 
@@ -194,7 +200,7 @@ vim.api.nvim_buf_set_extmark(
 )
 ```
 
-<!-- end_slide -->
+---
 
 ### Editor API
 
@@ -204,7 +210,7 @@ vim.api.nvim_buf_set_extmark(
 
 In a single function call, you can make this:
 
-![](./static/vtext_before.png)
+![width:50%](./static/vtext_before.png)
 
 <!-- pause -->
 
@@ -212,11 +218,11 @@ In a single function call, you can make this:
 
 Look like this:
 
-![](./static/vtext_after.png)
+![width:50%](./static/vtext_after.png)
 
 <!-- reset_layout -->
 
-<!-- end_slide -->
+---
 
 Tools uimhir a dó
 -----------------
@@ -238,7 +244,7 @@ These include heavy hitting features like:
 - Jump to definition
 - Code actions
 
-<!-- end_slide -->
+---
 
 ## The LSP
 
@@ -258,7 +264,7 @@ All language servers are equal, but some are more equal than others.
 
 With go, we are _blessed_ because `gopls` is best in class.
 
-<!-- end_slide -->
+---
 
 ## The LSP
 
@@ -271,7 +277,7 @@ this specification.
 Your editor also typically spawns and manages the lifecycle of a language
 server the when you start working in a project.
 
-<!-- end_slide -->
+---
 
 ## The LSP
 
@@ -285,7 +291,7 @@ sequenceDiagram
     Editor ->> User: Opens "uri", places cursor on to "range.start".
 ```
 
-<!-- end_slide -->
+---
 
 ## The LSP
 
@@ -299,7 +305,7 @@ sequenceDiagram
     Editor ->> User: Iter "changes", replace "range.start..range.end" with "newText"
 ```
 
-<!-- end_slide -->
+---
 
 ## The LSP
 
@@ -307,14 +313,14 @@ Following the previous tool, your editor is very likely to extend an API to use
 it's language server client which you can use in order to talk to your
 language's language server.
 
-<!-- end_slide -->
+---
 
 ## The LSP
 
 Demo
 ----
 
-<!-- end_slide -->
+---
 
 Other Editors
 -------------
@@ -331,7 +337,7 @@ Other Editors
 
 - [](https://github.com/redhat-developer/lsp4ij)
 
-<!-- end_slide -->
+---
 
 ## Tools part 3
 
@@ -344,7 +350,7 @@ We are going to focus on Tree Sitter, created by Max Brunsfeld during his time w
 
 Atom is dead, but tree-sitter lives on and we're in a better world for it.
 
-<!-- end_slide -->
+---
 
 ### ASTs
 
@@ -389,14 +395,14 @@ The tree-sitter formatting of this snippet is:
 
 <!-- reset_layout -->
 
-<!-- end_slide -->
+---
 
 ### ASTs
 
 Demo
 ----
 
-<!-- end_slide -->
+---
 
 Other Editors
 -------------
@@ -415,7 +421,7 @@ Use the `jsitter` plugin:
 
 - https://github.com/JetBrains/jsitter
 
-<!-- end_slide -->
+---
 
 Bringing it all together
 ------------------------
@@ -434,7 +440,7 @@ What if we used `tree-sitter` to query for all non-interface types, asked our
 language server to tell us what those types implement, and then displayed those
 results as virtual text?
 
-<!-- end_slide -->
+---
 
 Live Coding Demo
 ----------------

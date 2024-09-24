@@ -159,7 +159,10 @@ func (RandomAnimal) Talk() {
 
 ---
 
-# Moving swiftly on...
+<!-- jump_to_middle -->
+
+Moving swiftly on...
+--------------------
 
 <!--end_slide -->
 
@@ -315,7 +318,7 @@ language's language server.
 
 ---
 
-## The LSP
+<!-- jump_to_middle -->
 
 Demo
 ----
@@ -397,7 +400,7 @@ The tree-sitter formatting of this snippet is:
 
 ---
 
-### ASTs
+<!-- jump_to_middle -->
 
 Demo
 ----

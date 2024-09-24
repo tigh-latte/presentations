@@ -38,7 +38,7 @@ However, nothing here is Neovim exclusive. If you run VSCode, any Intellij IDE, 
 
 <!-- pause -->
 
-![](./static/iusevim.png)
+![image:width:40%](./static/iusevim.png)
 
 ---
 
@@ -46,7 +46,7 @@ However, nothing here is Neovim exclusive. If you run VSCode, any Intellij IDE, 
 
 <!-- pause -->
 
-![](static/gufer.png)
+![image:width:30%](static/gufer.png)
 
 Golang, while good fun, has both features and issues that you need to warm to.
 
@@ -210,7 +210,7 @@ vim.api.nvim_buf_set_extmark(
 
 In a single function call, you can make this:
 
-![width:50%](./static/vtext_before.png)
+![image:width:81%](./static/vtext_before.png)
 
 <!-- pause -->
 
@@ -218,7 +218,7 @@ In a single function call, you can make this:
 
 Look like this:
 
-![width:50%](./static/vtext_after.png)
+![image:width:81%](./static/vtext_after.png)
 
 <!-- reset_layout -->
 
@@ -283,7 +283,7 @@ server the when you start working in a project.
 
 ### Go to definition
 
-```mermaid +render
+```mermaid +render +width:95%
 sequenceDiagram
     User ->> Editor: Ctrl+Click
     Editor ->> gopls: {"method": "textDocument/definition", ... }
@@ -297,7 +297,7 @@ sequenceDiagram
 
 ### Rename
 
-```mermaid +render
+```mermaid +render +width:95%
 sequenceDiagram
     User ->> Editor: F2, inputs new name
     Editor ->> gopls: {"method": "textDocument/rename", ... }
@@ -445,4 +445,4 @@ results as virtual text?
 Live Coding Demo
 ----------------
 
-![](./static/sweat.jpg)
+![image:width:40%](./static/sweat.jpg)

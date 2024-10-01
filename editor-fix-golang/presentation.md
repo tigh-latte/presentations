@@ -28,7 +28,7 @@ Can we maybe use these features to paper over go's problems?
 
 ## What this talk is
 
-We will be using using Neovim and it's API, so there be more Lua than Golang.
+We will be using Neovim and its API, so there be more Lua than Golang.
 
 However, nothing here is Neovim exclusive. If you run VSCode, any Intellij IDE, or any other editor with good plugin support, all of this will be possible.
 
@@ -164,14 +164,14 @@ func (RandomAnimal) Talk() {
 Moving swiftly on...
 --------------------
 
-<!--end_slide -->
+---
 
-Tools
------
+<!-- jump_to_middle -->
 
-## Editor API
+Tools: Editor API
+-----------------
 
-<!--end_slide -->
+---
 
 ### Editor API
 
@@ -182,6 +182,28 @@ These APIs are fantastic building blocks.
 <!-- pause -->
 
 Let's take a _random_ API, displaying virtual text.
+
+---
+
+### Editor API
+
+<!-- column_layout: [1, 1] -->
+
+<!-- column: 0 -->
+
+Imagine if, in a single function call, you could make this:
+
+![image:width:81%](./static/vtext_before.png)
+
+<!-- pause -->
+
+<!-- column: 1 -->
+
+Look like this:
+
+![image:width:81%](./static/vtext_after.png)
+
+<!-- reset_layout -->
 
 ---
 
@@ -205,34 +227,14 @@ vim.api.nvim_buf_set_extmark(
 
 ---
 
-### Editor API
+<!-- jump_to_middle -->
 
-<!-- column_layout: [1, 1] -->
-
-<!-- column: 0 -->
-
-In a single function call, you can make this:
-
-![image:width:81%](./static/vtext_before.png)
-
-<!-- pause -->
-
-<!-- column: 1 -->
-
-Look like this:
-
-![image:width:81%](./static/vtext_after.png)
-
-<!-- reset_layout -->
+Tools: The Language Server Protocol (LSP)
+-----------------------------------------
 
 ---
 
-Tools uimhir a dó
------------------
-
-## The Language Server Protocol (LSP)
-
-<!-- pause -->
+## The LSP
 
 A lot of your editor's convienient language features may not actually be
 _editor_ features, and instead are implemented by your language's language
@@ -342,10 +344,14 @@ Other Editors
 
 ---
 
-## Tools part 3
+<!-- jump_to_middle -->
 
-Abstract syntax trees (AST)
+Tools: Abstract syntax trees (ASTs)
+----------------------------------
+
 ---
+
+## ASTs
 
 ASTs, for the uninitiated, is just your program parsed to a tree of syntax that can be traversed, used for syntax highlighting, and queried.
 
@@ -449,3 +455,10 @@ Live Coding Demo
 ----------------
 
 ![image:width:40%](./static/sweat.jpg)
+
+---
+
+<!-- jump_to_middle -->
+
+Any Questions?
+---

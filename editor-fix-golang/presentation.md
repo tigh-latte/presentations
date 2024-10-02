@@ -28,9 +28,15 @@ Can we maybe use these features to paper over go's problems?
 
 ## What this talk is
 
-We will be using Neovim and its API, so there be more Lua than Golang.
+We will be using Neovim and its API, so there be more Lua than Go.
 
 However, nothing here is Neovim exclusive. If you run VSCode, any Intellij IDE, or any other editor with good plugin support, all of this will be possible.
+
+<!-- pause -->
+
+I'm going to go over 3 different tools we can use, and then hopefully do some live coding at the end.
+
+So, for the sake of time, I'm going to be going quick to start.
 
 ---
 
@@ -48,7 +54,7 @@ However, nothing here is Neovim exclusive. If you run VSCode, any Intellij IDE, 
 
 ![image:width:30%](static/gufer.png)
 
-Golang, while good fun, has both features and issues that you need to warm to.
+Go, while good fun, has both features and issues that you need to warm to.
 
 To pick one of these features (_**totally**_ at random), we'll look at implicit interface satisfaction.
 
@@ -112,7 +118,7 @@ func (RandomAnimal) Talk() {
 
 ## Problems with Go
 
-Then as far as Golang is concerned, that animal is a duck:
+Then as far as Go is concerned, that animal is a duck:
 
 ```go
 func serveCustomer(d Duck) {
@@ -255,7 +261,7 @@ These include heavy hitting features like:
 
 A language server is specific to a language.
 
-- Golang has `gopls`
+- Go has `gopls`
 
 - Python has `pylsp`
 
@@ -367,7 +373,7 @@ Atom is dead, but tree-sitter lives on and we're in a better world for it.
 
 <!-- column: 0 -->
 
-Take the following golang:
+Take the following Go:
 
 ```go
 func Holy(term string) string {
@@ -442,6 +448,8 @@ Folks I've a confession to make. I've been lying to you all tonight.
 <!-- pause -->
 
 These weren't random examples.
+
+To fix the issue of Go not displaying what a struct implements...
 
 <!-- pause -->
 

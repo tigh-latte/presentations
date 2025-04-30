@@ -11,13 +11,13 @@ extensions:
 
 # Fáilte!
 
-lookatmego: a story
+lookatmego
 
 <!-- stop -->
 
 ## Background
 
-When your usecase is so niche that other tools just don't cut it, sometimes you have to make your own.
+When your usecase is so niche that other tools just don't cut it, sometimes you feel like making your own.
 
 ---
 
@@ -170,25 +170,28 @@ I'm going to quite quickly through most of these bullet points because they just
 
 # Implementation
 
-- [x] Presentation is written in markdown
+- [x] Ships as a standalone binary
 
-Let me show you the source of this presentation.
+`go build` and that's it.
 
 ---
 
 # Implementation
 
-- [x] Supports gradually revealing a slide
+- [x] Presentation is written in markdown
 
-A presentation is made up of slides (`[]Slide`), and slides are made up of sections (`[]string`).
+Let me show you the source of this presentation.
 
-A library `goldmark` is used to parse the markdown file into a syntax tree. The syntax tree is iterated, building the slide.
+<!-- stop -->
 
-We add content to the current working section. Once a `<!-- stop -->` is found, we create a new current working section. Once a `---` is found, the current slide is finalised and a new one is created.
+We use `goldmark` for parsing, more on that later.
 
 ---
 
-# Technology used for this so far
+
+# Implementation
+
+- [x] Presentation is written in markdown
 
 ## The UI
 
@@ -200,7 +203,9 @@ The TUI is written using exclusively charm bracelet software, in particular:
 
 ---
 
-# Technology used
+# Implementation
+
+- [x] Presentation is written in markdown
 
 ## BubbleTea
 
@@ -230,7 +235,9 @@ type Model interface {
 
 ---
 
-# Technology used
+# Implementation
+
+- [x] Presentation is written in markdown
 
 ## Lipgloss
 
@@ -242,7 +249,9 @@ Think of lipgloss as providing stylesheets but for text, you can position text, 
 
 ---
 
-# Technology used
+# Implementation
+
+- [x] Presentation is written in markdown
 
 ## Glamour
 
@@ -250,7 +259,11 @@ Automatic markdown rendering.
 
 ---
 
-# Technology used
+# Implementation
+
+- [x] Presentation is written in markdown
+
+## Goldmark
 
 So we can render a UI, but this thing needs features! If we're looking a markdown file to declare functionality, the we're going to need to parse it. For that we can use `goldmark`.
 
@@ -278,15 +291,28 @@ func (p *parser) parse(...) (ast.Node, error) {
 
 <!-- stop -->
 
-This allows us to spot features, such as:
+This allows us to identify and act on content, such as:
 
-- A render stop: `<!-- stop -->`<!-- stop -->
-- End of a page: `---` <!-- stop -->
-- A widget: `<!-- plugin:mycoolplugin arg1=hello arg2=world -->`
+- A render stop: (`*ast.RawHTML`) `<!-- stop -->`<!-- stop -->
+- End of a page: (`*ast.ThemeaticBreak`) `---` <!-- stop -->
+- A widget: (`*ast.RawHTML` or `*ast.FencedCodeBlock`)
+
+<!-- stop -->
+
+`<!-- plugin:greeter name=john-->`
+
+~~~plugin:not_markdown
+text: |-
+ ```plugin:greeter
+ name: john
+ ```
+~~~
 
 ---
 
-# Technology used
+# Implementation
+
+- [x] Supports gradually revealing a slide
 
 ## Piecing it together
 
@@ -302,7 +328,7 @@ type Page struct {
 }
 ```
 
-If you imagine that, using goldmark to travese the markdown document
+If you imagine that, using goldmark to traverse the markdown document
 
 Every time we hit any text, we add it to the current `Segment`.
 
@@ -320,13 +346,140 @@ Instead, the interesting part comes from a couple of the desired features:
 
 ---
 
-# Technology used
+# Implementation
 
-do a whole section on go plugins
+- [x] Supports user written plugins
+
+## Go's plugin system
+
+If you didn't know, golang supports plugins by way of:
+
+```go
+import "plugin"
+```
+
+You define an interface that you want a user's plugin to implement, and they just adhere to that.
+
+<!-- stop -->
+
+So imagine a simple interface:
+
+```go
+type Plugin interface {
+	Render(input []byte) string
+}
+```
+
+Imagine you wanted a plugin that could take a file path and return its text, so that your presentation can just reference demo code without having to update it in two places, and it takes as input:
+
+```yaml
+file: demo_code.go
+lang: go
+lines:
+  start: 5
+```
 
 ---
 
-# Technology used
+# Implementation
+
+- [x] Supports user written plugins
+
+Well, all you would need to do is:
+
+```go
+import "github.com/tigh-latte/lookatmego"
+
+func New() lookatmego.Plugin {
+	return &filePlugin{}
+}
+
+type filePlugin struct{}
+
+type fileArgs struct {
+	Path  string `yaml:"path"`
+	Lang  string `yaml:"lang"`
+	Lines struct {
+		Start int `yaml:"start"`
+		End   int `yaml:"end"`
+	} `yaml:"lines"`
+}
+
+
+func (f *filePlugin) Render(input []byte) string {
+	var args fileArgs
+	err := yaml.Unmarshal(f.Args, &args)
+	// handle err
+
+
+	if args.Path == "" {}// handle
+
+	bb, err := readFile(args.Path, args.Lines.Start, args.Lines.End)
+	// handle err
+
+	return "\n```" + args.Lang + "\n" + string(bb) + "\n```\n"
+}
+```
+
+And then compile:
+
+```sh
+go build -buildmode=plugin -o fileplugin.so
+```
+
+---
+
+# Implementation
+
+- [x] Supports user written plugins
+
+Then all I need to do is:
+
+```go
+func ExecPlugin(input []string) string {
+	plug, err := plugin.Open("fileplugin.so")
+	// handle err
+
+	builder, err := plug.Lookup("New")
+	// handle err
+
+	fn, ok := builder.(func() lookatmego.Plugin)
+	// handle not ok
+
+	return fn().Render(input)
+}
+```
+
+<!-- stop -->
+
+Pretty cool!
+
+## Demo
+
+---
+
+# Implementation
+
+- [x] Supports user written plugins
+
+# However
+
+I ended up not using go plugins. The constant compilation of the plugin was annoying. `.so` files trigger a lot of `WAF` rules, but, worst of all:
+
+- If a plugin is compiled a different version of go, then it can't loaded.
+- If a two plugins import competing version of the same package, then they can't be loaded.
+
+This meant users would have to run the same go version as me, and the same version of all my deps.<!-- stop --> Unacceptable.
+
+---
+
+# Implementation
+
+- [x] Supports user written plugins
+
+# A different approach...
+
+<!-- stop -->
 
 So at this point I had decided that it would be easier to just implement any wee one-off features I wanted into the core application, than it would be write and maintain a golang plugin for them.
 
@@ -451,7 +604,7 @@ params := // build params from yaml
 
 ```go
 err = L.CallByParam(lua.P{
-	Fn:      plugin,
+	Fn:      exec,
 	NRet:    1,
 	Protect: true,
 }, params)
@@ -464,7 +617,7 @@ result := L.Get(-1).String() // the string returned 'hello everyone'
 
 # But wait there's more
 
-Lua is a full on language, so there is more fun to be had than calling just strings. Do you remember the big reveal plugin?
+Lua is a full on language, so there is more fun to be had than just returning string. Do you remember the big reveal plugin?
 
 <!-- stop -->
 
@@ -508,7 +661,7 @@ Silly algo is:
 
 <!-- stop -->
 
-Sounds easy, but lua doesn't have a `sleep` function, so we need to call go.
+Sounds easy, but lua doesn't have a `sleep` function, so what can we do?
 
 ---
 
@@ -547,7 +700,7 @@ return {
 
 ---
 
-# Using go channels in lua
+# Sending to go channels in Lua
 
 We can add a `chan` to our lua state:
 
@@ -568,11 +721,11 @@ And we send content to this channel in lua, using `ch:send(str)`.
 
 ---
 
-# A quick `showcase`
+# A quick `fib` showcase
 
 <!-- stop -->
 
-<!-- plugin:showcase -->
+<!-- plugin:fib -->
 
 ---
 
@@ -602,3 +755,57 @@ return {
 # Let's build a plugin that actually does something
 
 <!-- plugin:weather prompt=> -->
+
+---
+
+# And that's us folks
+
+<!-- stop -->
+
+...unless
+
+<!-- stop -->
+
+## What I can show you today
+
+- [x] Presentation is written in markdown
+
+- [x] Supports gradually revealing a slide
+
+- [x] Supports widgets
+
+- [x] Ships as a standalone binary
+
+- [ ] Image rendering
+
+- [x] Supports user written plugins
+
+---
+
+# And that's us folks
+
+...unless
+
+## What I can show you today
+
+- [x] Presentation is written in markdown
+
+- [x] Supports gradually revealing a slide
+
+- [ ] Image rendering
+
+---
+
+# And that's us folks
+
+...unless
+
+## What I can show you today
+
+- [ ] Image rendering
+
+<!-- stop -->
+
+```plugin:image
+path: ./gopher.png
+```

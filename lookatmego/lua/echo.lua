@@ -1,7 +1,6 @@
 local M = {
 	state = { "> " },
 	is_markdown = false,
-	has_focus = true,
 }
 
 function M.plugin(input)

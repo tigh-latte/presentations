@@ -126,7 +126,7 @@ The truth is, the software I used has changed between presentations:
 
 This is what I used for my last talk, and it is honestly great software, if you're looking to give a terminal themed talk, I would recommend that you look at it.
 
-However, it not supporting user written plugins did urk me a bit, so I thought "Golang has a plugin system, why not give it a go?"
+However, it not supporting user written plugins did irk me a bit, so I thought "Golang has a plugin system, why not give it a go?"
 
 ---
 
@@ -188,15 +188,7 @@ We add content to the current working section. Once a `<!-- stop -->` is found, 
 
 ---
 
-# Implementation
-
-- [x] Supports widgets
-
-As well as discovering `<!-- stop -->`, helpers are usable
-
----
-
-# Technology used
+# Technology used for this so far
 
 ## The UI
 
@@ -260,11 +252,11 @@ Automatic markdown rendering.
 
 # Technology used
 
-So I can render a UI, but this thing needs features! If I'm looking a markdown file to declare functionality, the we're going to need to parse it. For that I use `goldmark`.
+So we can render a UI, but this thing needs features! If we're looking a markdown file to declare functionality, the we're going to need to parse it. For that we can use `goldmark`.
 
 <!-- stop -->
 
-After that, we just implement a simple parser that builds some state:
+Using that, we just implement a simple parser that builds some state:
 
 ```go
 func (p *parser) parse(...) (ast.Node, error) {
@@ -286,27 +278,11 @@ func (p *parser) parse(...) (ast.Node, error) {
 
 <!-- stop -->
 
-This allows me to spot features, such as:
+This allows us to spot features, such as:
 
 - A render stop: `<!-- stop -->`<!-- stop -->
 - End of a page: `---` <!-- stop -->
-- A widget:
-
-```html
-<!-- plugin:mycoolplugin arg1=hello arg2=world -->
-```
-
-or
-
-~~~plugin:raw
-text: |-
-  ~   ```plugin:mycoolplugin
-  ~   arg1: hello
-  ~   arg2: world
-  ~   parent_arg:
-  ~     sub_arg: holyhell
-  ~   ```
-~~~
+- A widget: `<!-- plugin:mycoolplugin arg1=hello arg2=world -->`
 
 ---
 
@@ -326,13 +302,19 @@ type Page struct {
 }
 ```
 
-If you imagine that, using goldmark to travese the mardown document
+If you imagine that, using goldmark to travese the markdown document
 
-Every time I hit a new `---` I start building a new `Page`
+Every time we hit any text, we add it to the current `Segment`.
 
-Every time I hit a `<!-- stop -->` I starting a new segment, then the actual meat of this wee program isn't all that hard or interesting. <!-- stop -->
+Every time we hit a `<!-- stop -->` we start a new `Segment`.
 
-Instead, the interesting part comes with one of my desired features:
+Every time we hit a new `---` we start a new `Segment` and a new `Page`.
+
+After that the actual meat of this wee program isn't all that hard or interesting. <!-- stop -->
+
+Instead, the interesting part comes from a couple of the desired features:
+
+- [x] Supports widgets
 
 - [x] Supports user written plugins
 
@@ -346,7 +328,7 @@ do a whole section on go plugins
 
 # Technology used
 
-So at this point I had decided that it would be easier to just implement any wee one-off features I wanted into the core application, than it would be write a golang plugin for them.
+So at this point I had decided that it would be easier to just implement any wee one-off features I wanted into the core application, than it would be write and maintain a golang plugin for them.
 
 So, this project was parked for a few weeks until Boxing Day last year, I was sitting on my sofa and then the solution popped into my head.
 
@@ -376,8 +358,7 @@ Given it's speed, ease of embedding, and tiny size, you find it in more places t
 - You can execute lua in `Redis` commands.
 - You can configure `nginx` using lua via a plugin.
 - `.rpm` files support lua scripting during installation.
-- `MySQL Workbench` for user addons.
-- `ScyllaDB` allows server-side functions to be written in Lua.
+- Used as a user plugin language for a lot of software (`MySQL Workbench`, `mpv`, `smocker`).
 - It's a config language for a lot of software (`neovim`, `wezterm`, `awesomewm`).
 - Some games (such as `Garry's Mod`, `Roblox`, `Hades 2`) have some-to-extensive portions of their code written in lua allowing for easy modding.
 - and the [list goes on](https://en.wikipedia.org/wiki/List_of_applications_using_Lua)
@@ -390,24 +371,19 @@ There are many packages offering to embed lua into a go program, but the one I c
 
 # Demo
 
-So, I figured I would first show you a simple plugin being written, then explain how to do all of this.
+Let's write a stupid plugin called `showcase`.
 
-I have defined a (yet to be written) plugin called `showcase`:
-
-```html
-<!-- plugin:showcase name=wow -->
-```
+It's defined in the markdown doc using a html comment: `<!-- plugin:showcase name=wow -->`
 
 <!-- stop -->
 
-```plugin:showcase
-name: |-
-    a wise man once said
-    > this is a quote
-```
+<!-- plugin:showcase name=wow -->
+
 ---
 
 # That is the most impressive thing I've seen in my life!!
+
+<!-- stop -->
 
 Thanks!
 
@@ -421,14 +397,208 @@ Ok!!!
 
 # Embedding lua
 
+Embedding lua is so simple, you set your PATH, declare a state, and execute code against that state.
+
+## Initing your lua state
+
+```go
+lua.LuaPathDefault = strings.Join(
+	[]string{
+		"./lua/?.lua",
+		"./lua/?/init.lua",
+		lua.LuaPathDefault,
+    },
+)
+
+L := lua.NewState(lua.Options{
+	CallStackSize:       120,
+	MinimizeStackMemory: true,
+})
+```
+
+---
+
+## Calling your lua plugin
+
+```go
+// return require 'showcase'
+fn, err := L.LoadString("return require'" + name + "'")
+// handle err
+```
+<!-- stop -->
+```go
+err = L.CallByParam(lua.P{
+	Fn:      fn,
+	NRet:    1,
+	Protect: true,
+})
+// handle err
+```
+<!-- stop -->
+```go
+plugin := L.ToTable(1)
+exec, ok := plugin.RawGetString("plugin").(*lua.LFunction)
+// check if ok
+isMarkdown, ok := plugin.RawGetString("is_markdown").(lua.LBool)
+if !ok {
+    isMarkdown = lua.LTrue
+}
+// handle
+
+// turn the input input params
+params := // build params from yaml
+```
+
+```go
+err = L.CallByParam(lua.P{
+	Fn:      plugin,
+	NRet:    1,
+	Protect: true,
+}, params)
+// handle err
+
+result := L.Get(-1).String() // the string returned 'hello everyone'
+```
+
 ---
 
 # But wait there's more
 
-<!-- plugin:echo -->
+Lua is a full on language, so there is more fun to be had than calling just strings. Do you remember the big reveal plugin?
+
+<!-- stop -->
+
+```plugin:reveal
+text: |-
+ ~ _     _   _    _
+ ~| |   | | | |  / \
+ ~| |   | | | | / _ \
+ ~| |___| |_| |/ ___ \
+ ~|_____|\___//_/   \_\
+slide_length: 75
+```
+<!-- stop -->
+
+It is defined using a code fence:
+
+~~~plugin:not_markdown
+text: |-
+ ```plugin:reveal
+ text: |-
+   ~ _     _   _    _
+   ~| |   | | | |  / \
+   ~| |   | | | | / _ \
+   ~| |___| |_| |/ ___ \
+   ~|_____|\___//_/   \_\
+ slide_length: 75
+ ```
+~~~
+
+<!-- stop -->
+
+### The reveal plugin
+
+To get this to work, we need lua to communicate with go.
+
+Silly algo is:
+
+1. Start with a string full of whitespace, equal in length to the input string.
+1. Sleep for `slide_length`.
+1. Reveal a random new character.
+
+<!-- stop -->
+
+Sounds easy, but lua doesn't have a `sleep` function, so we need to call go.
 
 ---
 
-# Let's see what the weather is
+# Calling Go from Lua
 
-<!-- plugin:query_weather prompt=> -->
+Calling go from lua is so simple. We a define a function, and add it to our lua state (`L`).
+
+```go
+func sleep(L *lua.LState) int {
+	millis := time.Duration(L.ToInt(1))
+	time.Sleep(millis * time.Millisecond)
+	return 0
+}
+
+L.SetGlobal("sleep", &lua.LFunction{
+	IsG:       true,
+	GFunction: sleep,
+})
+```
+<!-- stop -->
+
+Now, from within our plugins, we can call `sleep`:
+
+```lua
+return {
+	plugin = function(args)
+		while true do
+			sleep(args.slide_length)
+			-- reveal new character
+			-- break when all revealed
+		end
+		return "???"
+	end,
+}
+```
+
+---
+
+# Using go channels in lua
+
+We can add a `chan` to our lua state:
+
+```go
+ch := make(chan lua.LValue)
+L.SetGlobal("ch", lua.LChannel(ch))
+
+go func() {
+	for ev := range ch {
+		fmt.Println(ev.String())
+	}
+}()
+```
+
+<!-- stop -->
+
+And we send content to this channel in lua, using `ch:send(str)`.
+
+---
+
+# A quick `showcase`
+
+<!-- stop -->
+
+<!-- plugin:showcase -->
+
+---
+
+# But wait there's EVEN MORE
+
+<!-- plugin:echo -->
+
+<!-- stop -->
+
+## Accepting input
+
+In our plugin, we define an `on_key` function, and while focused, all bubbletea `tea.KeyMsg` inputs are just forwarded to this function for Lua to handle.
+
+```lua
+return {
+	plugin = function() return "> " end,
+	on_key = function(input)
+		-- do something with input
+		return input
+	end,
+	is_markdown = false,
+}
+```
+
+---
+
+# Let's build a plugin that actually does something
+
+<!-- plugin:weather prompt=> -->

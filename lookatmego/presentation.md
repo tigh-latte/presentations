@@ -519,6 +519,22 @@ text: |-
  ~|_____|\___//_/   \_\
 slide_length: 75
 ```
+<!-- stop -->
+
+And yes, the above was rendered using this lua plugin system, and is defined in the markdown document like so:
+
+~~~plugin:not_markdown
+text: |-
+ ```plugin:reveal
+ text: |-
+   ~ _     _   _    _
+   ~| |   | | | |  / \
+   ~| |   | | | | / _ \
+   ~| |___| |_| |/ ___ \
+   ~|_____|\___//_/   \_\
+ slide_length: 75
+ ```
+~~~
 
 
 ---
@@ -547,19 +563,20 @@ There are many packages offering to embed lua into a go program, but the one I c
 
 # Demo
 
-It'll be easier to show some embedded lua first, then explain how to go about embedding.
+It will be easier to show some embedded lua be executed first, and then afterwards explain how to go about embedding it.
 
 Let's write a stupid plugin called `showcase`.
 
-It's defined in the markdown doc using a html comment: `<!-- plugin:showcase name=wow -->`
+It's defined in the markdown doc using a html comment:
+`<!-- plugin:showcase name=john -->`
 
 <!-- stop -->
 
-<!-- plugin:showcase name=wow -->
+<!-- plugin:showcase name=john -->
 
 ---
 
-# That is the most impressive thing I've seen in my life!!
+# "_That is the most impressive thing I've seen in my life!!_"
 
 <!-- stop -->
 
@@ -567,7 +584,9 @@ Thanks!
 
 ---
 
-# Explain!
+# "_Explain!_"
+
+<!-- stop -->
 
 Ok!!!
 
@@ -575,7 +594,7 @@ Ok!!!
 
 # Embedding lua
 
-Embedding lua is so simple, you set your PATH, declare a state, and execute code against that state.
+Embedding lua is so simple, you set a PATH telling lua where to look for any `.lua` files, declare a state, and execute code against that state.
 
 ## Initing your lua state
 
@@ -611,10 +630,11 @@ err = L.CallByParam(lua.P{
 	Protect: true,
 })
 // handle err
+plugin := L.ToTable(1)
 ```
+
 <!-- stop -->
 ```go
-plugin := L.ToTable(1)
 exec, ok := plugin.RawGetString("plugin").(*lua.LFunction)
 // check if ok
 isMarkdown, ok := plugin.RawGetString("is_markdown").(lua.LBool)
@@ -622,12 +642,12 @@ if !ok {
     isMarkdown = lua.LTrue
 }
 // handle
-
-// turn the input input params
-params := // build params from yaml
 ```
+<!-- stop -->
 
 ```go
+// turn the input input params
+params := // build params from yaml
 err = L.CallByParam(lua.P{
 	Fn:      exec,
 	NRet:    1,
@@ -637,6 +657,10 @@ err = L.CallByParam(lua.P{
 
 result := L.Get(-1).String() // the string returned 'hello everyone'
 ```
+
+<!-- stop -->
+
+And that's it, you've now embedded a whole language into your go program, that folks can write and use to extend.
 
 ---
 

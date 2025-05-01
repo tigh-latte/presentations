@@ -17,7 +17,7 @@ lookatmego
 
 ## Background
 
-When your usecase is so niche that other tools just don't cut it, sometimes you feel like making your own.
+When your usecase is niche and other tools don't do everything you want, sometimes you take that as an opportunity to play about with a few new things.
 
 ---
 

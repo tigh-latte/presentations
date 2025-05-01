@@ -50,7 +50,7 @@ func main() {
 
 var (
 	footerStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#5555ee"))
+			Background(lipgloss.Color("#5555ee"))
 
 	inputStyle = lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).

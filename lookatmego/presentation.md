@@ -59,7 +59,7 @@ The truth is, the software I used has changed between presentations: <!-- stop -
 
 - [ ] Ships as a standalone binary
 
-<!--stop-->
+<!-- stop -->
 
 ## Why don't you use it now?
 
@@ -166,7 +166,17 @@ And that is what I'm using here today, `lookatmego`.
 
 # Just a quick note
 
-I'm going to quite quickly through most of these bullet points because they just aren't all that interesting.
+I'm going to quickly go through most of these bullet points, as they are fairly simple.
+
+<!-- stop -->
+
+And if you're sitting there thinking:
+
+"_Am I really about to watch a presentation about rendering markdown??? Even I could talk about something more interesting than that!_"
+
+<!-- stop -->
+
+Great to hear, awesome stuff, chat to use afterwards and we can arrange something.
 
 ---
 
@@ -364,7 +374,7 @@ You define an interface that you want a user's plugin to implement, and they jus
 
 <!-- stop -->
 
-So imagine a simple interface:
+So if we provide a simple interface:
 
 ```go
 type Plugin interface {
@@ -391,13 +401,19 @@ Well, all you would need to do is:
 
 ```go
 import "github.com/tigh-latte/lookatmego"
+```
+<!-- stop -->
+```go
+// Define our plugin and a constructor.
+type filePlugin struct{}
 
 func New() lookatmego.Plugin {
 	return &filePlugin{}
 }
-
-type filePlugin struct{}
-
+```
+<!-- stop -->
+```go
+// Define our args.
 type fileArgs struct {
 	Path  string `yaml:"path"`
 	Lang  string `yaml:"lang"`
@@ -406,8 +422,10 @@ type fileArgs struct {
 		End   int `yaml:"end"`
 	} `yaml:"lines"`
 }
-
-
+```
+<!-- stop -->
+```go
+// Implement the `lookatmego.Plugin` interface.
 func (f *filePlugin) Render(input []byte) string {
 	var args fileArgs
 	err := yaml.Unmarshal(f.Args, &args)
@@ -422,6 +440,8 @@ func (f *filePlugin) Render(input []byte) string {
 	return "\n```" + args.Lang + "\n" + string(bb) + "\n```\n"
 }
 ```
+
+<!-- stop -->
 
 And then compile:
 
@@ -468,10 +488,11 @@ Pretty cool!
 
 I ended up not using go plugins. The constant compilation of the plugin was annoying. `.so` files trigger a lot of `WAF` rules, but, worst of all:
 
-- If a plugin is compiled a different version of go, then it can't loaded.
+- If a plugin is compiled using a different version of go, then it can't loaded.
 - If a two plugins import competing version of the same package, then they can't be loaded.
+- A plugin has to be compiled for the architecture of the machine, so running your presentation on a macbook that you wrote on your linux desktop requires a recompile.
 
-This meant users would have to run the same go version as me, and the same version of all my deps.<!-- stop --> Unacceptable.
+This meant users would have to run the same go version as me, and the same version of all my deps, and do some form of self package manangement.<!-- stop --> Unacceptable.
 
 ---
 
@@ -525,6 +546,8 @@ There are many packages offering to embed lua into a go program, but the one I c
 ---
 
 # Demo
+
+It'll be easier to show some embedded lua first, then explain how to go about embedding.
 
 Let's write a stupid plugin called `showcase`.
 

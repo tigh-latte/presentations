@@ -5,6 +5,7 @@ import (
 
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 )
 
 type model struct {
@@ -46,3 +47,12 @@ func main() {
 
 	program.Run()
 }
+
+var (
+	footerStyle = lipgloss.NewStyle().
+			Foreground(lipgloss.Color("#5555ee"))
+
+	inputStyle = lipgloss.NewStyle().
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(lipgloss.Color("#abc123"))
+)

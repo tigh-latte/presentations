@@ -126,7 +126,9 @@ The truth is, the software I used has changed between presentations:
 
 This is what I used for my last talk, and it is honestly great software, if you're looking to give a terminal themed talk, I would recommend that you look at it.
 
-However, it not supporting user written plugins did irk me a bit, so I thought "Golang has a plugin system, why not give it a go?"
+However, it not supporting user written plugins did irk me a bit, so I thought "Golang has a plugin system, why not give it a go?".
+
+And that is what I'm using here today, `lookatmego`.
 
 ---
 

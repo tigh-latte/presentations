@@ -172,7 +172,7 @@ I'm going to quickly go through most of these bullet points, as they are fairly 
 
 And if you're sitting there thinking:
 
-"_Am I really about to watch a presentation about rendering markdown??? Even I could talk about something more interesting than that!_"
+"_Am I really about to watch a presentation about rendering markdown??? I could talk about something more interesting than that!_"
 
 <!-- stop -->
 

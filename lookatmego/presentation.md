@@ -829,7 +829,15 @@ return {
 
 - [ ] Image rendering
 
-<!-- stop -->
+---
+
+# And that's us folks
+
+...unless
+
+## What I can show you today
+
+- [x] Image rendering
 
 ```plugin:image
 path: ./gopher.png
